@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>미래서가 어드민</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:       #1C1C2E;
+      --parchment: #F5F0E8;
+      --parch-lt:  #FAF8F5;
+      --vermilion: #C0392B;
+      --verm-dk:   #9B2D22;
+      --gold:      #B8960C;
+      --moss:      #2C3B2E;
+      --ink-60:    rgba(28,28,46,0.6);
+      --ink-20:    rgba(28,28,46,0.2);
+      --ink-08:    rgba(28,28,46,0.08);
+      --success:   #2C6E49;
+      --font-d: 'Playfair Display', Georgia, serif;
+      --font-b: 'Source Serif 4', Georgia, serif;
+      --radius: 6px;
+      --shadow: 0 2px 8px rgba(28,28,46,0.1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-b);
+      background: var(--parchment);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--ink);
+      color: var(--parch-lt);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 60px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .topbar__brand {
+      font-family: var(--font-d);
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .topbar__brand span {
+      color: var(--gold);
+      font-style: italic;
+    }
+    .topbar__actions { display: flex; gap: 12px; align-items: center; }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      background: var(--moss);
+      padding: 32px 0;
+    }
+    .sidebar__label {
+      font-family: var(--font-b);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(245,240,232,0.45);
+      padding: 0 24px 12px;
+    }
+    .sidebar__nav { list-style: none; }
+    .sidebar__nav li { display: block; }
+    .sidebar__nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      color: rgba(245,240,232,0.75);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .sidebar__nav a:hover {
+      background: rgba(245,240,232,0.08);
+      color: var(--parch-lt);
+    }
+    .sidebar__nav a.active {
+      background: rgba(245,240,232,0.12);
+      color: var(--parch-lt);
+      border-left-color: var(--gold);
+    }
+    .sidebar__nav a svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── MAIN ── */
+    .main {
+      padding: 40px 48px;
+      max-width: 900px;
+    }
+
+    .section-panel { display: none; }
+    .section-panel.active { display: block; }
+
+    .panel-title {
+      font-family: var(--font-d);
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .panel-desc {
+      color: var(--ink-60);
+      font-size: 0.9375rem;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--parch-lt);
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+    .card__title {
+      font-family: var(--font-d);
+      font-size: 1.0625rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--ink-08);
+    }
+
+    /* ── FORM ── */
+    .field { margin-bottom: 20px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+      color: var(--ink-60);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      font-family: var(--font-b);
+      font-size: 0.9375rem;
+      color: var(--ink);
+      background: var(--parchment);
+      border: 1px solid var(--ink-20);
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--vermilion);
+    }
+    textarea { resize: vertical; line-height: 1.7; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .field-row--3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* ── BOOK ITEM ── */
+    .book-item {
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      background: var(--parchment);
+      position: relative;
+    }
+    .book-item__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .book-item__num {
+      font-family: var(--font-d);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gold);
+    }
+    .book-item__preview {
+      font-size: 0.9rem;
+      color: var(--ink-60);
+      flex: 1;
+      margin-left: 12px;
+    }
+    .book-item__toggle {
+      background: none;
+      border: 1px solid var(--ink-20);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-family: var(--font-b);
+      cursor: pointer;
+      color: var(--ink-60);
+      transition: all 0.2s;
+    }
+    .book-item__toggle:hover { border-color: var(--vermilion); color: var(--vermilion); }
+    .book-item__fields { display: none; }
+    .book-item__fields.open { display: block; }
+
+    /* ── BADGE SELECT ── */
+    .badge-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .badge-opt {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--ink-20);
+      font-size: 0.8125rem;
+      font-family: var(--font-b);
+      cursor: pointer;
+      background: transparent;
+      color: var(--ink-60);
+      transition: all 0.2s;
+    }
+    .badge-opt.selected {
+      background: var(--vermilion);
+      border-color: var(--vermilion);
+      color: var(--parch-lt);
+    }
+    .badge-opt[data-val=""] { background: var(--ink-08); border-color: transparent; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 24px;
+      border-radius: 4px;
+      font-family: var(--font-b);
+      font-size: 0.9375rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn--primary {
+      background: var(--vermilion);
+      color: var(--parch-lt);
+    }
+    .btn--primary:hover { background: var(--verm-dk); }
+    .btn--ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--ink-20);
+    }
+    .btn--ghost:hover { border-color: var(--ink); }
+    .btn--success {
+      background: var(--success);
+      color: var(--parch-lt);
+    }
+    .btn--sm {
+      padding: 7px 14px;
+      font-size: 0.8125rem;
+    }
+
+    .action-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--ink-08);
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--moss);
+      color: var(--parch-lt);
+      padding: 14px 24px;
+      border-radius: var(--radius);
+      font-size: 0.9375rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { background: var(--vermilion); }
+
+    /* ── STAT ROWS ── */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* ── COVER PREVIEW ── */
+    .cover-preview {
+      width: 48px;
+      height: 64px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    /* match cover colors from mirae-seoga.html */
+    .cover--1 { background: linear-gradient(145deg, #2C3B2E 0%, #1a2418 100%); }
+    .cover--2 { background: linear-gradient(145deg, #3D5A7A 0%, #243650 100%); }
+    .cover--3 { background: linear-gradient(145deg, #7A3D3D 0%, #501f1f 100%); }
+    .cover--4 { background: linear-gradient(145deg, #7A6B3D 0%, #50421f 100%); }
+    .cover--5 { background: linear-gradient(145deg, #1C1C2E 0%, #0e0e17 100%); }
+    .cover--6 { background: linear-gradient(145deg, #4A6741 0%, #2d4028 100%); }
+    .cover--7 { background: linear-gradient(145deg, #C0392B 0%, #7B2419 100%); }
+    .cover--8 { background: linear-gradient(145deg, #5A4A7A 0%, #362d4d 100%); }
+
+    .book-item__header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--ink-20);
+    }
+    .tab-nav button {
+      background: none;
+      border: none;
+      padding: 12px 24px;
+      font-family: var(--font-b);
+      font-size: 0.9375rem;
+      color: var(--ink-60);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+    .tab-nav button.active {
+      color: var(--vermilion);
+      border-bottom-color: var(--vermilion);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    hr.divider { border: none; border-top: 1px solid var(--ink-08); margin: 28px 0; }
+
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main { padding: 24px 20px; }
+      .field-row, .field-row--3, .stat-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar__brand">미래서가 <span>Admin</span></div>
+  <div class="topbar__actions">
+    <a href="mirae-seoga.html" target="_blank" class="btn btn--ghost btn--sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      홈페이지 미리보기
+    </a>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <p class="sidebar__label">콘텐츠 관리</p>
+    <ul class="sidebar__nav">
+      <li>
+        <a href="#" class="active" data-panel="hero">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+          히어로 & 텍스트
+        </a>
+      </li>
+      <li>
+        <a href="#" data-panel="books">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          도서 관리
+        </a>
+      </li>
+      <li>
+        <a href="#" data-panel="editor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          편집자 프로필
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ── HERO PANEL ── -->
+    <div class="section-panel active" id="panel-hero">
+      <h1 class="panel-title">히어로 & 사이트 텍스트</h1>
+      <p class="panel-desc">홈페이지 상단 히어로 섹션의 제목, 소개 문구, 통계 수치를 수정합니다.</p>
+
+      <div class="card">
+        <p class="card__title">Hero 제목 (H1)</p>
+        <div class="field">
+          <label>제목 HTML <small style="font-weight:400; color:var(--ink-60)">(줄바꿈은 &lt;br&gt;, 이탤릭 강조는 &lt;em&gt;...&lt;/em&gt; 사용)</small></label>
+          <textarea id="f-hero-h1" rows="3" placeholder="당신의 시선을 조금 더&lt;br&gt;&lt;em&gt;멀리 데려다줄&lt;/em&gt; 책을&lt;br&gt;찾고 있습니다"></textarea>
+        </div>
+        <div class="field">
+          <label>부제 (히어로 설명 문구)</label>
+          <textarea id="f-hero-subtext" rows="3" placeholder="미래서가의 편집자들은 오늘도..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__title">통계 수치 (3개)</p>
+        <div class="stat-grid" id="stats-container"></div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn--primary" onclick="saveHero()">저장하기</button>
+        <button class="btn btn--ghost" onclick="resetHero()">기본값으로 되돌리기</button>
+      </div>
+    </div>
+
+    <!-- ── BOOKS PANEL ── -->
+    <div class="section-panel" id="panel-books">
+      <h1 class="panel-title">도서 관리</h1>
+      <p class="panel-desc">신간 탭과 베스트셀러 탭의 도서 목록을 수정합니다. 각 탭 최대 4권.</p>
+
+      <div class="tab-nav">
+        <button class="active" data-books-tab="new">신간 도서</button>
+        <button data-books-tab="best">베스트셀러</button>
+      </div>
+
+      <div class="tab-content active" id="books-tab-new">
+        <div id="books-new-list"></div>
+      </div>
+      <div class="tab-content" id="books-tab-best">
+        <div id="books-best-list"></div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn--primary" onclick="saveBooks()">저장하기</button>
+        <button class="btn btn--ghost" onclick="resetBooks()">기본값으로 되돌리기</button>
+      </div>
+    </div>
+
+    <!-- ── EDITOR PANEL ── -->
+    <div class="section-panel" id="panel-editor">
+      <h1 class="panel-title">편집자 프로필</h1>
+      <p class="panel-desc">홈페이지 '편집자의 말' 섹션 인용구, 본문, 서명을 수정합니다.</p>
+
+      <div class="card">
+        <p class="card__title">인용구 (blockquote)</p>
+        <div class="field">
+          <label>편집자 인용 문구</label>
+          <textarea id="f-ed-quote" rows="3" placeholder="책 한 권이 세상에 나오기까지..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__title">편집자의 말 본문</p>
+        <div class="field">
+          <label>첫 번째 문단</label>
+          <textarea id="f-ed-body1" rows="4"></textarea>
+        </div>
+        <div class="field">
+          <label>두 번째 문단</label>
+          <textarea id="f-ed-body2" rows="4"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card__title">서명</p>
+        <div class="field">
+          <label>서명 텍스트 (직함 + 이름)</label>
+          <input type="text" id="f-ed-sig" placeholder="미래서가 편집장  김서연">
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn--primary" onclick="saveEditor()">저장하기</button>
+        <button class="btn btn--ghost" onclick="resetEditor()">기본값으로 되돌리기</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DEFAULT DATA ──
+var DEFAULTS = {
+  hero: {
+    h1: '당신의 시선을 조금 더<br><em>멀리 데려다줄</em> 책을<br>찾고 있습니다',
+    subtext: '미래서가의 편집자들은 오늘도 원고 더미 속에 앉아, 독자의 마음에 오래 남을 한 문장을 찾고 있습니다. 1989년부터 지금까지, 그 일을 멈춘 적이 없습니다.',
+    stats: [
+      { num: '35+',   label: '출판 연수' },
+      { num: '2,800', label: '출간 도서 수' },
+      { num: '120만', label: '독자 커뮤니티' }
+    ]
+  },
+  books: {
+    newArrivals: [
+      { title: '적막의 도서관', author: '김도윤', genre: '소설',  price: '16,800원', badge: '신간',  coverClass: 'cover--1' },
+      { title: '여름이 오래',   author: '이하은', genre: '소설',  price: '15,000원', badge: '신간',  coverClass: 'cover--2' },
+      { title: '북쪽의 언어',   author: '박서준', genre: '인문',  price: '18,000원', badge: '',     coverClass: 'cover--3' },
+      { title: '오래된 정원의 시간', author: '최지영', genre: '에세이', price: '14,500원', badge: '화제작', coverClass: 'cover--4' }
+    ],
+    bestsellers: [
+      { title: '밤의 목소리', author: '정수아', genre: '소설', price: '16,000원', badge: '1위', coverClass: 'cover--5' },
+      { title: '철학의 위로', author: '한유진', genre: '철학', price: '17,000원', badge: '2위', coverClass: 'cover--6' },
+      { title: '백 년의 편지', author: '오민준', genre: '역사', price: '19,500원', badge: '3위', coverClass: 'cover--7' },
+      { title: '조용한 혁명', author: '임지현', genre: '사회', price: '15,800원', badge: '',    coverClass: 'cover--8' }
+    ]
+  },
+  editor: {
+    quote: '책 한 권이 세상에 나오기까지, 수십 번의 퇴고와 수백 번의 망설임이 있습니다. 우리가 독자에게 건네는 것은 종이와 잉크가 아니라, 오래 품어온 질문입니다.',
+    body1: '미래서가는 빠르게 만들지 않습니다. 한 권의 책이 독자의 손에 닿기까지, 때로는 3년이 걸리기도 합니다. 그 시간 동안 편집자는 저자와 함께 앉아, 문장 하나하나가 제 무게를 갖도록 다듬습니다.',
+    body2: '우리가 출판하는 것은 정보가 아닙니다. 독자의 삶에 오래 남을 경험입니다. 그 믿음이 1989년부터 지금까지 미래서가를 움직이게 하는 힘입니다.',
+    sig: '미래서가 편집장  김서연'
+  }
+};
+
+var COVER_CLASSES = ['cover--1','cover--2','cover--3','cover--4','cover--5','cover--6','cover--7','cover--8'];
+var BADGE_OPTIONS = ['신간','화제작','추천','베스트','1위','2위','3위','4위',''];
+
+// ── STORAGE ──
+function load() {
+  try {
+    var raw = localStorage.getItem('miraeSeogaData');
+    return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULTS));
+  } catch(e) {
+    return JSON.parse(JSON.stringify(DEFAULTS));
+  }
+}
+
+function save(data) {
+  localStorage.setItem('miraeSeogaData', JSON.stringify(data));
+}
+
+// ── TOAST ──
+function showToast(msg, isError) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.className = 'toast'; }, 2800);
+}
+
+// ── SIDEBAR NAV ──
+document.querySelectorAll('.sidebar__nav a').forEach(function(a) {
+  a.addEventListener('click', function(e) {
+    e.preventDefault();
+    var panel = a.dataset.panel;
+    document.querySelectorAll('.sidebar__nav a').forEach(function(x){ x.classList.remove('active'); });
+    document.querySelectorAll('.section-panel').forEach(function(x){ x.classList.remove('active'); });
+    a.classList.add('active');
+    document.getElementById('panel-' + panel).classList.add('active');
+  });
+});
+
+// ── BOOKS TAB NAV ──
+document.querySelectorAll('[data-books-tab]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var tab = btn.dataset.booksTab;
+    document.querySelectorAll('[data-books-tab]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('books-tab-' + tab).classList.add('active');
+  });
+});
+
+// ── HERO ──
+function renderHero(d) {
+  document.getElementById('f-hero-h1').value = d.h1 || '';
+  document.getElementById('f-hero-subtext').value = d.subtext || '';
+
+  var sc = document.getElementById('stats-container');
+  sc.innerHTML = '';
+  (d.stats || []).forEach(function(s, i) {
+    var div = document.createElement('div');
+    div.innerHTML =
+      '<div class="field"><label>통계 ' + (i+1) + ' — 수치</label>' +
+      '<input type="text" data-stat-i="' + i + '" data-stat-key="num" value="' + esc(s.num) + '"></div>' +
+      '<div class="field"><label>통계 ' + (i+1) + ' — 레이블</label>' +
+      '<input type="text" data-stat-i="' + i + '" data-stat-key="label" value="' + esc(s.label) + '"></div>';
+    sc.appendChild(div);
+  });
+}
+
+function collectHero(data) {
+  data.hero.h1 = document.getElementById('f-hero-h1').value.trim();
+  data.hero.subtext = document.getElementById('f-hero-subtext').value.trim();
+  document.querySelectorAll('[data-stat-i]').forEach(function(el) {
+    var i = parseInt(el.dataset.statI);
+    var key = el.dataset.statKey;
+    if (!data.hero.stats[i]) data.hero.stats[i] = {};
+    data.hero.stats[i][key] = el.value.trim();
+  });
+}
+
+function saveHero() {
+  var data = load();
+  collectHero(data);
+  save(data);
+  showToast('히어로 섹션이 저장되었습니다.');
+}
+
+function resetHero() {
+  var data = load();
+  data.hero = JSON.parse(JSON.stringify(DEFAULTS.hero));
+  save(data);
+  renderHero(data.hero);
+  showToast('기본값으로 되돌렸습니다.');
+}
+
+// ── BOOKS ──
+function renderBookList(books, containerId, tabKey) {
+  var el = document.getElementById(containerId);
+  el.innerHTML = '';
+  (books || []).forEach(function(b, i) {
+    el.appendChild(buildBookItem(b, i, tabKey));
+  });
+}
+
+function buildBookItem(b, i, tabKey) {
+  var wrap = document.createElement('div');
+  wrap.className = 'book-item';
+  wrap.dataset.idx = i;
+  wrap.dataset.tab = tabKey;
+
+  // badge options html
+  var badgeHtml = BADGE_OPTIONS.map(function(opt) {
+    var sel = (b.badge || '') === opt ? ' selected' : '';
+    var label = opt === '' ? '없음' : opt;
+    return '<button type="button" class="badge-opt' + sel + '" data-val="' + opt + '">' + label + '</button>';
+  }).join('');
+
+  // cover options
+  var coverOpts = COVER_CLASSES.map(function(c) {
+    var sel = (b.coverClass || 'cover--1') === c ? ' selected="selected"' : '';
+    return '<option value="' + c + '"' + sel + '>' + c + '</option>';
+  }).join('');
+
+  wrap.innerHTML =
+    '<div class="book-item__header">' +
+      '<div class="book-item__header-left">' +
+        '<div class="cover-preview ' + (b.coverClass || 'cover--1') + '"></div>' +
+        '<span class="book-item__num">#' + (i+1) + '</span>' +
+        '<span class="book-item__preview">' + esc(b.title || '제목 없음') + ' — ' + esc(b.author || '') + '</span>' +
+      '</div>' +
+      '<button type="button" class="book-item__toggle">편집</button>' +
+    '</div>' +
+    '<div class="book-item__fields">' +
+      '<div class="field-row">' +
+        '<div class="field"><label>제목</label><input type="text" name="title" value="' + esc(b.title) + '"></div>' +
+        '<div class="field"><label>저자</label><input type="text" name="author" value="' + esc(b.author) + '"></div>' +
+      '</div>' +
+      '<div class="field-row--3 field-row">' +
+        '<div class="field"><label>장르</label><input type="text" name="genre" value="' + esc(b.genre||'') + '"></div>' +
+        '<div class="field"><label>가격</label><input type="text" name="price" value="' + esc(b.price||'') + '"></div>' +
+        '<div class="field"><label>커버 색상</label><select name="coverClass">' + coverOpts + '</select></div>' +
+      '</div>' +
+      '<div class="field"><label>배지</label><div class="badge-options">' + badgeHtml + '</div></div>' +
+    '</div>';
+
+  // toggle expand
+  wrap.querySelector('.book-item__toggle').addEventListener('click', function() {
+    var fields = wrap.querySelector('.book-item__fields');
+    var isOpen = fields.classList.toggle('open');
+    this.textContent = isOpen ? '접기' : '편집';
+  });
+
+  // badge select
+  wrap.querySelectorAll('.badge-opt').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      wrap.querySelectorAll('.badge-opt').forEach(function(b){ b.classList.remove('selected'); });
+      btn.classList.add('selected');
+    });
+  });
+
+  // live preview cover
+  wrap.querySelector('select[name="coverClass"]').addEventListener('change', function() {
+    var prev = wrap.querySelector('.cover-preview');
+    prev.className = 'cover-preview ' + this.value;
+  });
+
+  // live preview title
+  wrap.querySelector('input[name="title"]').addEventListener('input', function() {
+    wrap.querySelector('.book-item__preview').textContent =
+      this.value + ' — ' + (wrap.querySelector('input[name="author"]').value || '');
+  });
+
+  return wrap;
+}
+
+function collectBooks(data) {
+  ['new','best'].forEach(function(tab) {
+    var key = tab === 'new' ? 'newArrivals' : 'bestsellers';
+    var listId = 'books-' + tab + '-list';
+    var items = document.querySelectorAll('#' + listId + ' .book-item');
+    data.books[key] = Array.from(items).map(function(item) {
+      var selBadge = item.querySelector('.badge-opt.selected');
+      return {
+        title:      item.querySelector('input[name="title"]').value.trim(),
+        author:     item.querySelector('input[name="author"]').value.trim(),
+        genre:      item.querySelector('input[name="genre"]').value.trim(),
+        price:      item.querySelector('input[name="price"]').value.trim(),
+        coverClass: item.querySelector('select[name="coverClass"]').value,
+        badge:      selBadge ? selBadge.dataset.val : ''
+      };
+    });
+  });
+}
+
+function saveBooks() {
+  var data = load();
+  collectBooks(data);
+  save(data);
+  showToast('도서 목록이 저장되었습니다.');
+}
+
+function resetBooks() {
+  var data = load();
+  data.books = JSON.parse(JSON.stringify(DEFAULTS.books));
+  save(data);
+  renderBookList(data.books.newArrivals, 'books-new-list', 'new');
+  renderBookList(data.books.bestsellers, 'books-best-list', 'best');
+  showToast('기본값으로 되돌렸습니다.');
+}
+
+// ── EDITOR ──
+function renderEditor(d) {
+  document.getElementById('f-ed-quote').value = d.quote || '';
+  document.getElementById('f-ed-body1').value = d.body1 || '';
+  document.getElementById('f-ed-body2').value = d.body2 || '';
+  document.getElementById('f-ed-sig').value   = d.sig   || '';
+}
+
+function saveEditor() {
+  var data = load();
+  data.editor.quote = document.getElementById('f-ed-quote').value.trim();
+  data.editor.body1 = document.getElementById('f-ed-body1').value.trim();
+  data.editor.body2 = document.getElementById('f-ed-body2').value.trim();
+  data.editor.sig   = document.getElementById('f-ed-sig').value.trim();
+  save(data);
+  showToast('편집자 프로필이 저장되었습니다.');
+}
+
+function resetEditor() {
+  var data = load();
+  data.editor = JSON.parse(JSON.stringify(DEFAULTS.editor));
+  save(data);
+  renderEditor(data.editor);
+  showToast('기본값으로 되돌렸습니다.');
+}
+
+// ── UTILS ──
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ──
+(function init() {
+  var data = load();
+  renderHero(data.hero);
+  renderBookList(data.books.newArrivals, 'books-new-list', 'new');
+  renderBookList(data.books.bestsellers, 'books-best-list', 'best');
+  renderEditor(data.editor);
+})();
+</script>
+</body>
+</html>

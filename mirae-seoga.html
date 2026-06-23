@@ -1795,19 +1795,19 @@
           <!-- Text side (7/12) -->
           <div class="hero__content">
             <p class="hero__eyebrow fade-up">신간 출간 안내</p>
-            <h1 class="hero__h1 fade-up fade-up--delay-1">
+            <h1 class="hero__h1 fade-up fade-up--delay-1" id="cms-hero-h1">
               당신의 시선을 조금 더<br>
               <em>멀리 데려다줄</em> 책을<br>
               찾고 있습니다
             </h1>
-            <p class="hero__subtext fade-up fade-up--delay-2">
+            <p class="hero__subtext fade-up fade-up--delay-2" id="cms-hero-subtext">
               미래서가의 편집자들은 오늘도 원고 더미 속에 앉아, 독자의 마음에 오래 남을 한 문장을 찾고 있습니다. 1989년부터 지금까지, 그 일을 멈춘 적이 없습니다.
             </p>
             <div class="hero__cta-group fade-up fade-up--delay-3">
               <a href="#arrivals" class="btn btn--primary">미래서가의 책 만나보기</a>
               <a href="#editorial" class="btn btn--ghost">편집자의 이야기 읽기</a>
             </div>
-            <div class="hero__meta fade-up fade-up--delay-4">
+            <div class="hero__meta fade-up fade-up--delay-4" id="cms-hero-stats">
               <div class="hero__stat">
                 <span class="hero__stat-num">35+</span>
                 <span class="hero__stat-label">출판 연수</span>
@@ -1849,10 +1849,10 @@
     <section class="editorial" id="editorial" aria-label="편집자의 말">
       <div class="container">
         <span class="editorial__label fade-up">편집자의 말</span>
-        <blockquote class="editorial__quote fade-up fade-up--delay-1">
+        <blockquote class="editorial__quote fade-up fade-up--delay-1" id="cms-editorial-quote">
           책 한 권이 세상에 나오기까지, 수십 번의 퇴고와 수백 번의 망설임이 있습니다. 우리가 독자에게 건네는 것은 종이와 잉크가 아니라, 오래 품어온 질문입니다.
         </blockquote>
-        <div class="editorial__body fade-up fade-up--delay-2">
+        <div class="editorial__body fade-up fade-up--delay-2" id="cms-editorial-body">
           <p>
             미래서가는 빠르게 만들지 않습니다. 한 권의 책이 독자의 손에 닿기까지, 때로는 3년이 걸리기도 합니다. 그 시간 동안 편집자는 저자와 함께 앉아, 문장 하나하나가 제 무게를 갖도록 다듬습니다.
           </p>
@@ -1862,7 +1862,7 @@
         </div>
         <div class="editorial__sig fade-up fade-up--delay-3">
           <div class="editorial__sig-line"></div>
-          <p class="editorial__sig-text">미래서가 편집장 &nbsp;김서연</p>
+          <p class="editorial__sig-text" id="cms-editorial-sig">미래서가 편집장 &nbsp;김서연</p>
           <div class="editorial__sig-line"></div>
         </div>
       </div>
@@ -1973,7 +1973,7 @@
 
         <!-- Tab: New Arrivals -->
         <div class="tab-panel is-active" id="panel-new" role="tabpanel" aria-labelledby="tab-new">
-          <div class="books-grid">
+          <div class="books-grid" id="cms-books-new">
 
             <article class="book-card fade-up">
               <div class="book-card__cover-wrap">
@@ -2039,7 +2039,7 @@
 
         <!-- Tab: Bestsellers -->
         <div class="tab-panel" id="panel-best" role="tabpanel" aria-labelledby="tab-best">
-          <div class="books-grid">
+          <div class="books-grid" id="cms-books-best">
 
             <article class="book-card fade-up">
               <div class="book-card__cover-wrap">
@@ -2615,6 +2615,85 @@
           showSuccess();
         }, 800);
       });
+    })();
+
+    // =====================================================
+    // CMS LOADER — reads from localStorage (admin.html)
+    // =====================================================
+    (function initCMS() {
+      var raw = localStorage.getItem('miraeSeogaData');
+      if (!raw) return;
+      var d;
+      try { d = JSON.parse(raw); } catch(e) { return; }
+
+      // Hero H1
+      if (d.hero && d.hero.h1) {
+        var h1 = document.getElementById('cms-hero-h1');
+        if (h1) h1.innerHTML = d.hero.h1;
+      }
+      // Hero subtext
+      if (d.hero && d.hero.subtext) {
+        var st = document.getElementById('cms-hero-subtext');
+        if (st) st.textContent = d.hero.subtext;
+      }
+      // Hero stats
+      if (d.hero && Array.isArray(d.hero.stats)) {
+        var statsEl = document.getElementById('cms-hero-stats');
+        if (statsEl) {
+          statsEl.innerHTML = d.hero.stats.map(function(s) {
+            return '<div class="hero__stat"><span class="hero__stat-num">' + s.num +
+                   '</span><span class="hero__stat-label">' + s.label + '</span></div>';
+          }).join('');
+        }
+      }
+      // Books
+      function renderBooks(books, containerId) {
+        if (!Array.isArray(books)) return;
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        var delays = ['', ' fade-up--delay-1', ' fade-up--delay-2', ' fade-up--delay-3'];
+        el.innerHTML = books.map(function(b, i) {
+          var badge = b.badge ? '<span class="book-card__badge">' + b.badge + '</span>' : '';
+          var coverCls = b.coverClass || ('cover--' + (i + 1));
+          return '<article class="book-card fade-up' + (delays[i] || '') + '">' +
+            '<div class="book-card__cover-wrap">' +
+              '<div class="book-card__cover ' + coverCls + '" role="img" aria-label="' + b.title + ' 표지">' +
+                badge +
+                '<p class="book-card__cover-title">' + b.title + '</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="book-card__info">' +
+              '<p class="book-card__genre">' + (b.genre || '') + '</p>' +
+              '<h3 class="book-card__title">' + b.title + '</h3>' +
+              '<p class="book-card__author">' + b.author + ' 지음</p>' +
+              '<p class="book-card__price">' + (b.price || '') + '</p>' +
+            '</div>' +
+          '</article>';
+        }).join('');
+      }
+      if (d.books) {
+        renderBooks(d.books.newArrivals, 'cms-books-new');
+        renderBooks(d.books.bestsellers, 'cms-books-best');
+      }
+      // Editorial
+      if (d.editor) {
+        if (d.editor.quote) {
+          var eq = document.getElementById('cms-editorial-quote');
+          if (eq) eq.textContent = d.editor.quote;
+        }
+        if (d.editor.body1 || d.editor.body2) {
+          var eb = document.getElementById('cms-editorial-body');
+          if (eb) {
+            eb.innerHTML =
+              '<p>' + (d.editor.body1 || '') + '</p>' +
+              (d.editor.body2 ? '<p style="margin-top:16px;">' + d.editor.body2 + '</p>' : '');
+          }
+        }
+        if (d.editor.sig) {
+          var es = document.getElementById('cms-editorial-sig');
+          if (es) es.textContent = d.editor.sig;
+        }
+      }
     })();
 
     // =====================================================
