@@ -1,0 +1,15 @@
+# Environment / secrets
+.env
+*.env.local
+
+# Aider
+.aider.chat.history.md
+.aider.input.history
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.swp
