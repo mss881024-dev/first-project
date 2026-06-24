@@ -1886,37 +1886,56 @@
     }
 
     /* =====================================================
+       RESPONSIVE — TABLET WIDE (769px~1024px)
+       히어로 2컬럼 유지: gap·책 스택 크기 조정
+    ===================================================== */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .hero__grid {
+        grid-template-columns: 5fr 4fr;
+        gap: 40px;
+        padding-block: 64px;
+        text-align: left;
+      }
+
+      .hero__subtext {
+        margin-inline: 0;
+      }
+
+      .hero__cta-group {
+        justify-content: flex-start;
+      }
+
+      .hero__meta {
+        justify-content: flex-start;
+      }
+
+      .hero__visual {
+        order: 0;
+      }
+
+      .hero__book-stack {
+        max-width: 260px;
+      }
+
+      .hero__book-main {
+        width: 156px;
+      }
+
+      .hero__book-secondary {
+        width: 140px;
+      }
+
+      .hero__book-tertiary {
+        width: 132px;
+      }
+    }
+
+    /* =====================================================
        RESPONSIVE — TABLET (max 1024px)
     ===================================================== */
     @media (max-width: 1024px) {
       :root {
         --section-gap: 88px;
-      }
-
-      .hero__grid {
-        grid-template-columns: 1fr;
-        gap: 56px;
-        text-align: center;
-      }
-
-      .hero__subtext {
-        margin-inline: auto;
-      }
-
-      .hero__cta-group {
-        justify-content: center;
-      }
-
-      .hero__meta {
-        justify-content: center;
-      }
-
-      .hero__visual {
-        order: -1;
-      }
-
-      .hero__book-stack {
-        max-width: 280px;
       }
 
       .story__grid {
@@ -1969,8 +1988,32 @@
         display: flex;
       }
 
+      /* 히어로: 768px 이하에서만 단일 컬럼 전환 */
       .hero__grid {
+        grid-template-columns: 1fr;
+        gap: 48px;
         padding-block: 56px;
+        text-align: center;
+      }
+
+      .hero__subtext {
+        margin-inline: auto;
+      }
+
+      .hero__cta-group {
+        justify-content: center;
+      }
+
+      .hero__meta {
+        justify-content: center;
+      }
+
+      .hero__visual {
+        order: -1;
+      }
+
+      .hero__book-stack {
+        max-width: 280px;
       }
 
       .story__grid {
@@ -1994,17 +2037,27 @@
         grid-template-columns: 1fr;
       }
 
+      /* 뉴스레터 폼: 세로 전환 + 완결된 카드 스타일 */
       .newsletter__form {
         flex-direction: column;
-        border-radius: 0;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(28, 28, 46, 0.2);
+        width: 100%;
+        max-width: 100%;
       }
 
       .newsletter__input {
-        border-radius: 3px 3px 0 0;
+        border-radius: 0;
+        padding: 18px 20px;
+        min-height: 56px;
       }
 
       .newsletter__submit {
-        border-radius: 0 0 3px 3px;
+        border-radius: 0;
+        padding: 18px 20px;
+        min-height: 52px;
+        text-align: center;
       }
 
       .footer__grid {
@@ -2014,7 +2067,22 @@
 
       .footer__bottom {
         flex-direction: column;
-        text-align: center;
+        align-items: flex-start;
+        text-align: left;
+        gap: 12px;
+      }
+
+      /* 사업자 정보: 줄바꿈 허용, 텍스트 크기 축소 */
+      .footer__copy {
+        font-size: 0.75rem;
+        line-height: 1.8;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+      }
+
+      .footer__legal {
+        gap: 16px;
+        flex-wrap: wrap;
       }
 
       .arrivals__header {
@@ -2029,16 +2097,48 @@
 
     /* =====================================================
        MOBILE SMALL (max 480px)
+       books-grid: 단일 컬럼 전환 (320px 기준 검증)
+       320px - 48px(pad) = 272px. 2컬럼 시 카드 128px
+       → 표지 높이 192px, 텍스트 잘림 심각 → 1컬럼 전환
     ===================================================== */
     @media (max-width: 480px) {
       .books-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        max-width: 320px;
+        margin-inline: auto;
       }
 
       .hero__meta {
-        gap: 28px;
+        gap: 24px;
         flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .newsletter__form {
+        max-width: 100%;
+      }
+
+      .footer__copy {
+        font-size: 0.6875rem;
+      }
+    }
+
+    /* =====================================================
+       MOBILE XSMALL (max 360px)
+    ===================================================== */
+    @media (max-width: 360px) {
+      .books-grid {
+        max-width: 100%;
+      }
+
+      .hero__h1 {
+        font-size: 1.75rem;
+      }
+
+      .newsletter__input,
+      .newsletter__submit {
+        font-size: 0.875rem;
       }
     }
   </style>
@@ -2686,7 +2786,9 @@
 
       <div class="footer__bottom">
         <p class="footer__copy">
-          &copy; 도서출판 창. All rights reserved. &nbsp;&middot;&nbsp; 사업자등록번호 105-90-97607 &nbsp;&middot;&nbsp; 서울특별시 영등포구 문래북로 116 트리플렉스빌딩 903호 &nbsp;&middot;&nbsp; 대표 이규인
+          &copy; 도서출판 창. All rights reserved.<br>
+          <span class="footer__copy-biz">사업자등록번호 105-90-97607 &nbsp;&middot;&nbsp; 대표 이규인</span><br>
+          <span class="footer__copy-addr">서울특별시 영등포구 문래북로 116 트리플렉스빌딩 903호</span>
         </p>
         <nav class="footer__legal" aria-label="법적 고지">
           <a href="#">개인정보처리방침</a>
