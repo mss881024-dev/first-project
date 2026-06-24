@@ -259,7 +259,7 @@
     }
 
     .nav__logo-en {
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       color: var(--color-ink-60);
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -696,7 +696,7 @@
 
     .editorial__label {
       display: inline-block;
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--color-gold);
@@ -788,7 +788,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--color-vermilion);
@@ -878,7 +878,7 @@
 
     .story-card__tag {
       display: inline-block;
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--color-gold);
@@ -1043,9 +1043,9 @@
       right: 12px;
       background-color: var(--color-vermilion);
       color: var(--color-parchment-lt);
-      font-size: 0.625rem;
+      font-size: 0.75rem;
       letter-spacing: 0.1em;
-      padding: 3px 8px;
+      padding: 4px 9px;
       border-radius: 2px;
       text-transform: uppercase;
     }
@@ -1055,7 +1055,7 @@
     }
 
     .book-card__genre {
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--color-gold);
@@ -1132,7 +1132,7 @@
     }
 
     .about__label {
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--color-gold);
@@ -1338,7 +1338,7 @@
 
     .newsletter__label {
       display: inline-block;
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: rgba(255,255,255,0.7);
@@ -1498,7 +1498,7 @@
 
     .footer__col-title {
       font-family: var(--font-body);
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--color-gold);
@@ -1566,6 +1566,266 @@
       color: var(--color-parchment-lt);
       font-size: 1.25rem;
       font-weight: 700;
+    }
+
+    /* =====================================================
+       BOOK CARD MODAL
+    ===================================================== */
+    .book-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(28, 28, 46, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .book-modal-overlay.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .book-modal {
+      background: var(--color-parchment-lt);
+      border-radius: 6px;
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      transform: translateY(24px) scale(0.97);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 32px 80px rgba(28, 28, 46, 0.3);
+    }
+
+    .book-modal-overlay.is-open .book-modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .book-modal__close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--color-ink-08);
+      color: var(--color-ink);
+      transition: background var(--transition-base), color var(--transition-base);
+      z-index: 1;
+    }
+
+    .book-modal__close:hover,
+    .book-modal__close:focus-visible {
+      background: var(--color-ink-20);
+    }
+
+    .book-modal__close svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .book-modal__cover-band {
+      height: 200px;
+      display: flex;
+      align-items: flex-end;
+      padding: 24px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .book-modal__cover-band::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--color-gold), rgba(184,150,12,0.2));
+    }
+
+    .book-modal__cover-title {
+      font-family: var(--font-display);
+      font-size: 1.375rem;
+      font-weight: 600;
+      color: var(--color-parchment);
+      line-height: 1.3;
+      position: relative;
+      z-index: 1;
+    }
+
+    .book-modal__body {
+      padding: 28px 28px 32px;
+    }
+
+    .book-modal__genre {
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-gold);
+      margin-bottom: 6px;
+    }
+
+    .book-modal__title {
+      font-family: var(--font-display);
+      font-size: 1.375rem;
+      font-weight: 600;
+      color: var(--color-ink);
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+
+    .book-modal__author {
+      font-size: 0.9375rem;
+      color: var(--color-ink-60);
+      margin-bottom: 16px;
+    }
+
+    .book-modal__price {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-vermilion);
+      margin-bottom: 24px;
+    }
+
+    .book-modal__divider {
+      height: 1px;
+      background: var(--color-ink-08);
+      margin-bottom: 24px;
+    }
+
+    .book-modal__store-label {
+      font-size: 0.8125rem;
+      letter-spacing: 0.08em;
+      color: var(--color-ink-60);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .book-modal__store-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .book-modal__store-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 18px;
+      border: 1.5px solid var(--color-ink-20);
+      border-radius: 3px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      color: var(--color-ink);
+      letter-spacing: 0.02em;
+      transition: border-color var(--transition-base), background var(--transition-base), color var(--transition-base);
+      text-decoration: none;
+    }
+
+    .book-modal__store-btn:hover,
+    .book-modal__store-btn:focus-visible {
+      border-color: var(--color-vermilion);
+      color: var(--color-vermilion);
+      background: rgba(192, 57, 43, 0.04);
+    }
+
+    .book-modal__store-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    /* book-card cursor affordance */
+    .book-card {
+      cursor: pointer;
+    }
+
+    /* =====================================================
+       COUNTER ANIMATION
+    ===================================================== */
+    /* No extra CSS needed — handled purely in JS */
+
+    /* =====================================================
+       TAB PANEL CROSSFADE
+    ===================================================== */
+    .tab-panel {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+      /* keep layout so height doesn't collapse */
+      position: absolute;
+      width: 100%;
+    }
+
+    .tab-panel.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+      position: relative;
+    }
+
+    .tab-panels-wrapper {
+      position: relative;
+    }
+
+    /* =====================================================
+       NEWSLETTER MICRO-INTERACTIONS
+    ===================================================== */
+    @keyframes newsletter-shake {
+      0%, 100% { transform: translateX(0); }
+      18%       { transform: translateX(-7px); }
+      36%       { transform: translateX(7px); }
+      54%       { transform: translateX(-5px); }
+      72%       { transform: translateX(5px); }
+      90%       { transform: translateX(-2px); }
+    }
+
+    .newsletter__form.is-shaking {
+      animation: newsletter-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    .newsletter__submit--loading {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .newsletter__success-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+    }
+
+    .newsletter__success-check {
+      stroke-dasharray: 36;
+      stroke-dashoffset: 36;
+      transition: stroke-dashoffset 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+    }
+
+    .newsletter__success-check.is-drawn {
+      stroke-dashoffset: 0;
     }
 
     /* =====================================================
@@ -1971,6 +2231,7 @@
           </nav>
         </div>
 
+        <div class="tab-panels-wrapper">
         <!-- Tab: New Arrivals -->
         <div class="tab-panel is-active" id="panel-new" role="tabpanel" aria-labelledby="tab-new">
           <div class="books-grid" id="cms-books-new">
@@ -2104,6 +2365,7 @@
 
           </div>
         </div>
+        </div><!-- /.tab-panels-wrapper -->
       </div>
     </section>
 
@@ -2257,6 +2519,12 @@
 
         <p class="newsletter__error" id="newsletter-error" role="alert" aria-live="polite"></p>
         <div class="newsletter__success" id="newsletter-success" role="status" aria-live="polite">
+          <div class="newsletter__success-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <polyline class="newsletter__success-check" points="5,14 11,20 23,8"
+                stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           구독 신청이 완료되었습니다. 첫 편지가 곧 도착할 예정입니다.
         </div>
 
@@ -2363,6 +2631,41 @@
       </div>
     </div>
   </footer>
+
+  <!-- ===================================================
+       BOOK DETAIL MODAL
+  =================================================== -->
+  <div
+    class="book-modal-overlay"
+    id="book-modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="book-modal-title"
+    aria-hidden="true"
+  >
+    <div class="book-modal" id="book-modal" tabindex="-1">
+      <button class="book-modal__close" id="book-modal-close" aria-label="모달 닫기">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M2 2l12 12M14 2L2 14"/>
+        </svg>
+      </button>
+
+      <!-- Cover band — background colour injected by JS -->
+      <div class="book-modal__cover-band" id="book-modal-cover-band" aria-hidden="true">
+        <p class="book-modal__cover-title" id="book-modal-cover-title"></p>
+      </div>
+
+      <div class="book-modal__body">
+        <p class="book-modal__genre" id="book-modal-genre"></p>
+        <h2 class="book-modal__title" id="book-modal-title"></h2>
+        <p class="book-modal__author" id="book-modal-author"></p>
+        <p class="book-modal__price" id="book-modal-price"></p>
+        <div class="book-modal__divider"></div>
+        <p class="book-modal__store-label">온라인 서점에서 구매</p>
+        <div class="book-modal__store-links" id="book-modal-store-links"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Visually hidden utility -->
   <style>
