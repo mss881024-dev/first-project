@@ -201,6 +201,19 @@
         transition: none;
       }
       html { scroll-behavior: auto; }
+
+      .tab-panel {
+        transition: none;
+      }
+
+      .newsletter__form.is-shaking {
+        animation: none;
+      }
+
+      .newsletter__success-check {
+        transition: none;
+        stroke-dashoffset: 0;
+      }
     }
 
     /* =====================================================
@@ -984,13 +997,7 @@
       border-bottom-color: var(--color-vermilion);
     }
 
-    .tab-panel {
-      display: none;
-    }
-
-    .tab-panel.is-active {
-      display: block;
-    }
+    /* tab-panel visibility is now managed by the crossfade CSS block below */
 
     /* Books grid */
     .books-grid {
@@ -1451,7 +1458,7 @@
 
     .newsletter__fine {
       font-size: 0.8125rem;
-      color: rgba(255,255,255,0.55);
+      color: rgba(255,255,255,0.82);
       line-height: 1.6;
     }
 
@@ -1590,14 +1597,14 @@
 
     .footer__copy {
       font-size: 0.8125rem;
-      color: rgba(245,240,232,0.3);
+      color: rgba(245,240,232,0.55);
       line-height: 1.75;
     }
 
     .footer__copy-biz,
     .footer__copy-addr {
       display: inline;
-      color: rgba(245,240,232,0.3);
+      color: rgba(245,240,232,0.55);
     }
 
     .footer__legal {
@@ -1607,7 +1614,7 @@
 
     .footer__legal a {
       font-size: 0.8125rem;
-      color: rgba(245,240,232,0.3);
+      color: rgba(245,240,232,0.55);
       transition: color var(--transition-base);
     }
 
@@ -2173,7 +2180,7 @@
       <li><a href="#arrivals">총도서목록</a></li>
       <li><a href="#arrivals">베스트셀러</a></li>
       <li><a href="#arrivals">신간도서</a></li>
-      <li><a href="#newsletter">자료실</a></li>
+      <li><a href="#newsletter">뉴스레터</a></li>
     </ul>
 
     <div class="nav__actions">
@@ -2200,7 +2207,7 @@
         <li><a href="#arrivals" class="drawer-link">총도서목록</a></li>
         <li><a href="#arrivals" class="drawer-link">베스트셀러</a></li>
         <li><a href="#arrivals" class="drawer-link">신간도서</a></li>
-        <li><a href="#newsletter" class="drawer-link">자료실</a></li>
+        <li><a href="#newsletter" class="drawer-link">뉴스레터</a></li>
       </ul>
     </nav>
     <div class="nav__drawer-footer">
@@ -3173,6 +3180,266 @@
           if (es) es.textContent = d.editor.sig;
         }
       }
+    })();
+
+    // =====================================================
+    // BOOK CARD MODAL
+    // =====================================================
+    (function initBookModal() {
+      var overlay    = document.getElementById('book-modal-overlay');
+      var modal      = document.getElementById('book-modal');
+      var closeBtn   = document.getElementById('book-modal-close');
+      var coverBand  = document.getElementById('book-modal-cover-band');
+      var coverTitle = document.getElementById('book-modal-cover-title');
+      var genreEl    = document.getElementById('book-modal-genre');
+      var titleEl    = document.getElementById('book-modal-title');
+      var authorEl   = document.getElementById('book-modal-author');
+      var priceEl    = document.getElementById('book-modal-price');
+      var storeLinks = document.getElementById('book-modal-store-links');
+      if (!overlay || !modal) return;
+
+      var coverColours = {
+        'cover--1': 'linear-gradient(150deg, #2C3B2E 0%, #1a2a1c 100%)',
+        'cover--2': 'linear-gradient(150deg, #3b2c1a 0%, #2a1e12 100%)',
+        'cover--3': 'linear-gradient(150deg, #1C2840 0%, #111a2c 100%)',
+        'cover--4': 'linear-gradient(150deg, #3a1c1c 0%, #2c1414 100%)',
+        'cover--5': 'linear-gradient(150deg, #2a2c1a 0%, #1c1e12 100%)',
+        'cover--6': 'linear-gradient(150deg, #1c1c3a 0%, #14142c 100%)',
+        'cover--7': 'linear-gradient(150deg, #2c1a2a 0%, #1e1220 100%)',
+        'cover--8': 'linear-gradient(150deg, #1a2c2c 0%, #122020 100%)'
+      };
+
+      var previousFocus = null;
+      var SEL = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+      function openModal(data) {
+        previousFocus = document.activeElement;
+
+        coverTitle.textContent = data.title;
+        coverBand.style.background = coverColours[data.coverClass]
+          || 'linear-gradient(150deg, #2C3B2E 0%, #1a2a1c 100%)';
+        genreEl.textContent  = data.genre  || '';
+        titleEl.textContent  = data.title  || '';
+        authorEl.textContent = data.author || '';
+        priceEl.textContent  = data.price  || '';
+
+        var q = encodeURIComponent(data.title);
+        storeLinks.innerHTML =
+          '<a class="book-modal__store-btn" href="https://search.kyobobook.co.kr/search?keyword=' + q + '" target="_blank" rel="noopener noreferrer">교보문고</a>' +
+          '<a class="book-modal__store-btn" href="https://www.yes24.com/Product/Search?domain=ALL&query=' + q + '" target="_blank" rel="noopener noreferrer">YES24</a>' +
+          '<a class="book-modal__store-btn" href="https://www.aladin.co.kr/search/wsearchresult.aspx?SearchWord=' + q + '" target="_blank" rel="noopener noreferrer">알라딘</a>';
+
+        overlay.classList.add('is-open');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(function () {
+          var firstFocusable = modal.querySelector(SEL);
+          if (firstFocusable) { firstFocusable.focus(); } else { modal.focus(); }
+        }, 60);
+      }
+
+      function closeModal() {
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        if (previousFocus) { previousFocus.focus(); previousFocus = null; }
+      }
+
+      overlay.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeModal(); return; }
+        if (e.key !== 'Tab') return;
+        var focusables = Array.from(modal.querySelectorAll(SEL));
+        if (!focusables.length) return;
+        var first = focusables[0];
+        var last  = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      });
+
+      closeBtn.addEventListener('click', closeModal);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+
+      function attachCardListeners() {
+        document.querySelectorAll('.book-card').forEach(function (card) {
+          if (card.dataset.modalBound) return;
+          card.dataset.modalBound = '1';
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('role', 'button');
+
+          function handleOpen(e) {
+            if (e.target && e.target.closest && e.target.closest('a')) return;
+            var cover = card.querySelector('.book-card__cover');
+            var coverClass = cover
+              ? (Array.from(cover.classList).find(function (c) { return c.startsWith('cover--'); }) || '')
+              : '';
+            openModal({
+              title:      ((card.querySelector('.book-card__title')  || {}).textContent || '').trim(),
+              author:     ((card.querySelector('.book-card__author') || {}).textContent || '').trim(),
+              price:      ((card.querySelector('.book-card__price')  || {}).textContent || '').trim(),
+              genre:      ((card.querySelector('.book-card__genre')  || {}).textContent || '').trim(),
+              coverClass: coverClass
+            });
+          }
+
+          card.addEventListener('click', handleOpen);
+          card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpen(e); }
+          });
+        });
+      }
+
+      attachCardListeners();
+
+      var booksRoot = document.querySelector('.arrivals');
+      if (booksRoot) {
+        new MutationObserver(attachCardListeners).observe(booksRoot, { childList: true, subtree: true });
+      }
+    })();
+
+    // =====================================================
+    // NUMBER COUNTER ANIMATION (viewport entry)
+    // =====================================================
+    (function initCounters() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      function parseStatString(text) {
+        var m = (text || '').trim().match(/^(\d+)([^\d]*)$/);
+        return m ? { value: parseInt(m[1], 10), suffix: m[2] || '' } : null;
+      }
+
+      function animateCounter(el, target, suffix, duration) {
+        var startTs = null;
+        function ease(t) { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+        function step(ts) {
+          if (!startTs) startTs = ts;
+          var p = Math.min((ts - startTs) / duration, 1);
+          el.textContent = Math.round(ease(p) * target) + suffix;
+          if (p < 1) { window.requestAnimationFrame(step); }
+        }
+        window.requestAnimationFrame(step);
+      }
+
+      var statEls = document.querySelectorAll('.hero__stat-num, .about__stat-num');
+      if (!statEls.length) return;
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          if (el.dataset.counted) return;
+          el.dataset.counted = '1';
+          var parsed = parseStatString(el.textContent);
+          if (!parsed) return;
+          el.textContent = '0' + parsed.suffix;
+          animateCounter(el, parsed.value, parsed.suffix, 1200);
+          observer.unobserve(el);
+        });
+      }, { threshold: 0.6 });
+
+      statEls.forEach(function (el) { observer.observe(el); });
+    })();
+
+    // =====================================================
+    // HERO BOOK STACK PARALLAX
+    // =====================================================
+    (function initBookParallax() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      var secondary = document.querySelector('.hero__book-secondary');
+      var tertiary  = document.querySelector('.hero__book-tertiary');
+      if (!secondary && !tertiary) return;
+
+      if (secondary) secondary.style.willChange = 'transform';
+      if (tertiary)  tertiary.style.willChange  = 'transform';
+
+      var ticking = false;
+      window.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(function () {
+          var y = window.scrollY;
+          if (secondary) secondary.style.transform = 'rotate(4deg) translateY(' + (-(y * 0.10)).toFixed(2) + 'px)';
+          if (tertiary)  tertiary.style.transform  = 'rotate(-3deg) translateY(' + (-(y * 0.15)).toFixed(2) + 'px)';
+          ticking = false;
+        });
+      }, { passive: true });
+    })();
+
+    // =====================================================
+    // NEWSLETTER MICRO-INTERACTIONS
+    // =====================================================
+    (function initNewsletterMicro() {
+      var form      = document.getElementById('newsletter-form');
+      var successEl = document.getElementById('newsletter-success');
+      if (!form || !successEl) return;
+
+      var checkEl = successEl.querySelector('.newsletter__success-check');
+
+      // Clone to strip the original initNewsletter() listener
+      var parent  = form.parentNode;
+      var newForm = form.cloneNode(true);
+      parent.replaceChild(newForm, form);
+
+      var emailEl = newForm.querySelector('#newsletter-email');
+      var errorEl = document.getElementById('newsletter-error');
+      var newBtn  = newForm.querySelector('#newsletter-submit');
+
+      function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+        successEl.style.display = 'none';
+        emailEl.setAttribute('aria-invalid', 'true');
+        newForm.classList.remove('is-shaking');
+        void newForm.offsetWidth;
+        newForm.classList.add('is-shaking');
+        newForm.addEventListener('animationend', function () {
+          newForm.classList.remove('is-shaking');
+        }, { once: true });
+      }
+
+      function clearError() {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
+        emailEl.removeAttribute('aria-invalid');
+      }
+
+      function showSuccess() {
+        newForm.style.display = 'none';
+        errorEl.style.display = 'none';
+        successEl.style.display = 'block';
+        if (checkEl) {
+          setTimeout(function () { checkEl.classList.add('is-drawn'); }, 80);
+        }
+      }
+
+      emailEl.addEventListener('input', function () {
+        if (emailEl.value && !isValidEmail(emailEl.value)) {
+          errorEl.textContent = '올바른 이메일 주소를 입력해주세요.';
+          errorEl.style.display = 'block';
+          emailEl.setAttribute('aria-invalid', 'true');
+        } else { clearError(); }
+      });
+
+      newForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearError();
+        var val = emailEl.value.trim();
+        if (!val) { showError('이메일 주소를 입력해주세요.'); emailEl.focus(); return; }
+        if (!isValidEmail(val)) { showError('올바른 이메일 주소 형식이 아닙니다. 예: name@example.com'); emailEl.focus(); return; }
+
+        newBtn.disabled = true;
+        newBtn.textContent = '전송 중…';
+        newBtn.classList.add('newsletter__submit--loading');
+
+        setTimeout(function () {
+          newBtn.disabled = false;
+          newBtn.classList.remove('newsletter__submit--loading');
+          showSuccess();
+        }, 900);
+      });
     })();
 
     // =====================================================
