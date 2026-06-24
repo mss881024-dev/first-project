@@ -1084,6 +1084,37 @@
       color: var(--color-ink);
     }
 
+    .book-card__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 12px;
+      font-size: 0.8125rem;
+      color: var(--color-vermilion);
+      letter-spacing: 0.03em;
+      border-bottom: 1px solid transparent;
+      transition: border-color var(--transition-base), gap var(--transition-base);
+      text-decoration: none;
+    }
+
+    .book-card__cta:hover,
+    .book-card__cta:focus-visible {
+      border-bottom-color: var(--color-vermilion);
+      gap: 8px;
+    }
+
+    .book-card__cta:focus-visible {
+      outline: 2px solid var(--color-gold);
+      outline-offset: 3px;
+      border-radius: 1px;
+    }
+
+    .book-card__cta svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
     /* Book cover colors */
     .cover--1 { background: linear-gradient(150deg, #2C3B2E 0%, #1a2a1c 100%); }
     .cover--2 { background: linear-gradient(150deg, #3b2c1a 0%, #2a1e12 100%); }
@@ -1435,9 +1466,26 @@
        9. FOOTER
     ===================================================== */
     .footer {
-      background-color: var(--color-ink);
-      padding-top: 80px;
+      background-color: #161624;
+      padding-top: 0;
       padding-bottom: 40px;
+      position: relative;
+    }
+
+    /* About -> Footer 경계 구분선 — gold tint divider */
+    .footer::before {
+      content: '';
+      display: block;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(245,240,232,0.12) 15%,
+        rgba(184,150,12,0.4) 50%,
+        rgba(245,240,232,0.12) 85%,
+        transparent 100%
+      );
+      margin-bottom: 80px;
     }
 
     .footer__grid {
@@ -2088,12 +2136,12 @@
             <div class="hero__book-stack">
               <div class="hero__book-tertiary" aria-hidden="true"></div>
               <div class="hero__book-secondary" aria-hidden="true"></div>
-              <div class="hero__book-main" aria-label="도서출판 창 추천 도서">
+              <div class="hero__book-main" aria-label="도서출판 창 추천 도서: 카네기 자기관리론">
                 <div class="hero__book-deco" aria-hidden="true">
-                  <span>미</span>
+                  <span>창</span>
                 </div>
-                <p class="hero__book-title">세계의 끝과<br>하드보일드<br>원더랜드</p>
-                <p class="hero__book-author">도서출판 창 편집부 엄선</p>
+                <p class="hero__book-title">카네기<br>자기관리론</p>
+                <p class="hero__book-author">데일 카네기 지음</p>
               </div>
               <div class="hero__ornament" aria-hidden="true"></div>
             </div>
@@ -2545,7 +2593,7 @@
         <!-- Brand col -->
         <div>
           <div class="footer__logo-mark" aria-hidden="true">
-            <span>미</span>
+            <span>창</span>
           </div>
           <p class="footer__brand-name">도서출판 창</p>
           <p class="footer__brand-tagline">문학에서 실용까지, 삶을 넓히는 책</p>
