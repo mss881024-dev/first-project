@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>미래서가 어드민</title>
+  <title>도서출판 창 어드민</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
@@ -380,7 +380,7 @@
 
 <!-- TOP BAR -->
 <header class="topbar">
-  <div class="topbar__brand">미래서가 <span>Admin</span></div>
+  <div class="topbar__brand">도서출판 창 <span>Admin</span></div>
   <div class="topbar__actions">
     <a href="mirae-seoga.html" target="_blank" class="btn btn--ghost btn--sm">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -432,7 +432,7 @@
         </div>
         <div class="field">
           <label>부제 (히어로 설명 문구)</label>
-          <textarea id="f-hero-subtext" rows="3" placeholder="미래서가의 편집자들은 오늘도..."></textarea>
+          <textarea id="f-hero-subtext" rows="3" placeholder="도서출판 창은 1993년 서울 영등포에서 시작해..."></textarea>
         </div>
       </div>
 
@@ -499,7 +499,7 @@
         <p class="card__title">서명</p>
         <div class="field">
           <label>서명 텍스트 (직함 + 이름)</label>
-          <input type="text" id="f-ed-sig" placeholder="미래서가 편집장  김서연">
+          <input type="text" id="f-ed-sig" placeholder="도서출판 창 대표  이규인">
         </div>
       </div>
 
@@ -519,33 +519,33 @@
 // ── DEFAULT DATA ──
 var DEFAULTS = {
   hero: {
-    h1: '당신의 시선을 조금 더<br><em>멀리 데려다줄</em> 책을<br>찾고 있습니다',
-    subtext: '미래서가의 편집자들은 오늘도 원고 더미 속에 앉아, 독자의 마음에 오래 남을 한 문장을 찾고 있습니다. 1989년부터 지금까지, 그 일을 멈춘 적이 없습니다.',
+    h1: '문학에서 실용까지,<br>삶을 넓히는 책을<br>만들어갑니다',
+    subtext: '도서출판 창은 1993년 서울 영등포에서 시작해 외국어·인문·아동 등 7개 분야에 걸쳐 180여 종의 책을 펴낸 독립출판사입니다. 독자의 일상을 조금 더 넓고 깊게 만드는 책을 만들어갑니다.',
     stats: [
-      { num: '35+',   label: '출판 연수' },
-      { num: '2,800', label: '출간 도서 수' },
-      { num: '120만', label: '독자 커뮤니티' }
+      { num: '30+',  label: '출판 연수' },
+      { num: '180+', label: '출간 도서 수' },
+      { num: '7개',  label: '출판 분야' }
     ]
   },
   books: {
     newArrivals: [
-      { title: '적막의 도서관', author: '김도윤', genre: '소설',  price: '16,800원', badge: '신간',  coverClass: 'cover--1' },
-      { title: '여름이 오래',   author: '이하은', genre: '소설',  price: '15,000원', badge: '신간',  coverClass: 'cover--2' },
-      { title: '북쪽의 언어',   author: '박서준', genre: '인문',  price: '18,000원', badge: '',     coverClass: 'cover--3' },
-      { title: '오래된 정원의 시간', author: '최지영', genre: '에세이', price: '14,500원', badge: '화제작', coverClass: 'cover--4' }
+      { title: '왕초보토탈여행 베트남어회화사전', author: '편집부', genre: '외국어', price: '15,000원', badge: '신간', coverClass: 'cover--1' },
+      { title: '한국 야생 버섯도감 新개정',       author: '편집부', genre: '건강',   price: '46,000원', badge: '신간', coverClass: 'cover--2' },
+      { title: '3단계 왕초보 영어 쓰기교본',      author: '편집부', genre: '외국어', price: '12,000원', badge: '신간', coverClass: 'cover--3' },
+      { title: '플래티넘 스도쿠 중급',            author: '편집부', genre: '아동청소년', price: '8,000원', badge: '신간', coverClass: 'cover--4' }
     ],
     bestsellers: [
-      { title: '밤의 목소리', author: '정수아', genre: '소설', price: '16,000원', badge: '1위', coverClass: 'cover--5' },
-      { title: '철학의 위로', author: '한유진', genre: '철학', price: '17,000원', badge: '2위', coverClass: 'cover--6' },
-      { title: '백 년의 편지', author: '오민준', genre: '역사', price: '19,500원', badge: '3위', coverClass: 'cover--7' },
-      { title: '조용한 혁명', author: '임지현', genre: '사회', price: '15,800원', badge: '',    coverClass: 'cover--8' }
+      { title: '카네기 자기관리론',      author: '데일 카네기', genre: '인문', price: '14,000원', badge: '베스트', coverClass: 'cover--5' },
+      { title: '카네기 처세론',          author: '데일 카네기', genre: '인문', price: '14,000원', badge: '베스트', coverClass: 'cover--6' },
+      { title: '명품숨은그림찾기',       author: '편집부',      genre: '아동청소년', price: '12,000원', badge: '추천', coverClass: 'cover--7' },
+      { title: '어린이 스도쿠 입문편',   author: '편집부',      genre: '아동청소년', price: '10,000원', badge: '추천', coverClass: 'cover--8' }
     ]
   },
   editor: {
-    quote: '책 한 권이 세상에 나오기까지, 수십 번의 퇴고와 수백 번의 망설임이 있습니다. 우리가 독자에게 건네는 것은 종이와 잉크가 아니라, 오래 품어온 질문입니다.',
-    body1: '미래서가는 빠르게 만들지 않습니다. 한 권의 책이 독자의 손에 닿기까지, 때로는 3년이 걸리기도 합니다. 그 시간 동안 편집자는 저자와 함께 앉아, 문장 하나하나가 제 무게를 갖도록 다듬습니다.',
-    body2: '우리가 출판하는 것은 정보가 아닙니다. 독자의 삶에 오래 남을 경험입니다. 그 믿음이 1989년부터 지금까지 미래서가를 움직이게 하는 힘입니다.',
-    sig: '미래서가 편집장  김서연'
+    quote: '좋은 책은 독자의 생활을 조금 더 넓고 깊게 만듭니다. 도서출판 창은 그 믿음 하나로 30년 넘게 책을 만들어왔습니다.',
+    body1: '도서출판 창은 외국어 회화, 인문 교양, 아동 학습, 건강 실용에 이르기까지 독자의 실제 삶에 필요한 책을 만드는 데 집중해왔습니다. 화려한 마케팅보다 책 한 권이 독자의 손에서 오래 머물기를 바랍니다.',
+    body2: '서울 영등포 작은 사무실에서 시작한 창이 180여 종의 책을 세상에 내놓기까지, 저자와 편집자가 함께 원고를 다듬은 시간이 쌓인 결과입니다. 앞으로도 같은 마음으로 책을 만들겠습니다.',
+    sig: '도서출판 창 대표  이규인'
   }
 };
 
