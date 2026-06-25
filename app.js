@@ -1,416 +1,310 @@
 'use strict';
 
-// ── Data ────────────────────────────────────────────────────────────────────
+// ── 상수 ─────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'fintrack_transactions';
-
-const CATEGORIES = {
-  income:  ['Salary', 'Freelance', 'Investment', 'Gift', 'Refund', 'Other'],
-  expense: ['Food & Drink', 'Housing', 'Transport', 'Shopping', 'Healthcare', 'Entertainment', 'Utilities', 'Other'],
+const STORAGE_KEYS = {
+  gongeum: 'fintrack_gongeum',
+  car:     'fintrack_car',
 };
 
-const CATEGORY_ICONS = {
-  'Salary': '💼', 'Freelance': '🖥️', 'Investment': '📈', 'Gift': '🎁',
-  'Refund': '↩️', 'Food & Drink': '🍔', 'Housing': '🏠', 'Transport': '🚗',
-  'Shopping': '🛍️', 'Healthcare': '💊', 'Entertainment': '🎬',
-  'Utilities': '💡', 'Other': '📌',
-};
+// ── 상태 ─────────────────────────────────────────────────────────────────────
 
-function loadData() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
+let currentAccount = 'gongeum'; // 'gongeum' | 'car'
+let currentYear    = new Date().getFullYear();
+let currentMonth   = new Date().getMonth() + 1; // 1-12
+
+let pendingDelete  = null; // { id, account }
+let undoTimer      = null;
+
+// ── 데이터 ───────────────────────────────────────────────────────────────────
+
+function loadData(account) {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS[account])) || [];
+  } catch {
+    return [];
+  }
 }
 
-function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function saveData(account, data) {
+  localStorage.setItem(STORAGE_KEYS[account], JSON.stringify(data));
 }
 
-let transactions = loadData();
-
-// ── DOM Refs ─────────────────────────────────────────────────────────────────
-
-const elBalance      = document.getElementById('balance');
-const elBalanceNote  = document.getElementById('balance-note');
-const elIncome       = document.getElementById('total-income');
-const elIncomeCount  = document.getElementById('income-count');
-const elExpense      = document.getElementById('total-expense');
-const elExpenseCount = document.getElementById('expense-count');
-const elTxnList      = document.getElementById('txn-list');
-const elEmptyState   = document.getElementById('empty-state');
-const elFilterType   = document.getElementById('filter-type');
-const elFilterCat    = document.getElementById('filter-category');
-const elChart        = document.getElementById('chart');
-const elChartEmpty   = document.getElementById('chart-empty');
-const elToast        = document.getElementById('toast');
-
-// Modal
-const elOverlay  = document.getElementById('modal-overlay');
-const elForm     = document.getElementById('txn-form');
-const elFDesc    = document.getElementById('f-desc');
-const elFAmount  = document.getElementById('f-amount');
-const elFType    = document.getElementById('f-type');
-const elFCat     = document.getElementById('f-category');
-const elFDate    = document.getElementById('f-date');
-const elFormErr  = document.getElementById('form-error');
-const elBtnSubmit = document.getElementById('btn-submit');
-
-// ── Utilities ────────────────────────────────────────────────────────────────
-
-function fmt(n) {
-  return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function getTransactions(account) {
+  return loadData(account);
 }
 
-function fmtDate(iso) {
-  const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function addTransaction(account, txn) {
+  const data = loadData(account);
+  data.push(txn);
+  saveData(account, data);
+}
+
+function removeTransaction(account, id) {
+  const data = loadData(account).filter(t => t.id !== id);
+  saveData(account, data);
 }
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function showToast(msg, dur = 2400) {
-  elToast.textContent = msg;
-  elToast.classList.remove('hidden', 'fade-out');
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    elToast.classList.add('fade-out');
-    setTimeout(() => elToast.classList.add('hidden'), 400);
-  }, dur);
+// ── 포맷 ─────────────────────────────────────────────────────────────────────
+
+function fmtWon(n) {
+  return '₩' + Math.abs(n).toLocaleString('ko-KR');
 }
 
-// ── Category Select ───────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  // iso: YYYY-MM-DD → M.DD
+  const parts = iso.split('-');
+  const m = parseInt(parts[1], 10);
+  const d = parts[2];
+  return m + '.' + d;
+}
 
-function populateCategorySelect(type, selectEl, selectedVal = '') {
-  selectEl.innerHTML = '';
-  CATEGORIES[type].forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    if (c === selectedVal) o.selected = true;
-    selectEl.appendChild(o);
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── DOM Refs ──────────────────────────────────────────────────────────────────
+
+const elMonthLabel     = document.getElementById('monthLabel');
+const elPrevMonth      = document.getElementById('prevMonth');
+const elNextMonth      = document.getElementById('nextMonth');
+const elTabGongeum     = document.getElementById('tabGongeum');
+const elTabCar         = document.getElementById('tabCar');
+const elSumBalance     = document.getElementById('sumBalance');
+const elSumIncome      = document.getElementById('sumIncome');
+const elSumExpense     = document.getElementById('sumExpense');
+const elTxnList        = document.getElementById('transactionList');
+const elEmptyState     = document.getElementById('emptyState');
+const elFabBtn         = document.getElementById('fabBtn');
+const elModalOverlay   = document.getElementById('modalOverlay');
+const elModalClose     = document.getElementById('modalClose');
+const elSegIncome      = document.getElementById('segIncome');
+const elSegExpense     = document.getElementById('segExpense');
+const elInputDate      = document.getElementById('inputDate');
+const elInputAmount    = document.getElementById('inputAmount');
+const elInputNote      = document.getElementById('inputNote');
+const elSubmitBtn      = document.getElementById('submitBtn');
+const elSnackbar       = document.getElementById('snackbar');
+const elSnackbarMsg    = document.getElementById('snackbarMsg');
+const elSnackbarUndo   = document.getElementById('snackbarUndo');
+
+// ── 렌더 ──────────────────────────────────────────────────────────────────────
+
+function renderMonthLabel() {
+  elMonthLabel.textContent = currentYear + '년 ' + currentMonth + '월';
+}
+
+function getMonthlyTxns() {
+  const all = getTransactions(currentAccount);
+  const prefix = currentYear + '-' + String(currentMonth).padStart(2, '0');
+  return all.filter(t => t.date.startsWith(prefix));
+}
+
+function renderSummary(txns) {
+  const income  = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance = income - expense;
+
+  elSumBalance.textContent = fmtWon(balance);
+  elSumBalance.className   = 'summary-value' + (balance >= 0 ? ' positive' : ' negative');
+  elSumIncome.textContent  = fmtWon(income);
+  elSumExpense.textContent = fmtWon(expense);
+}
+
+function renderList(txns) {
+  // 날짜 오름차순
+  const sorted = txns.slice().sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
+
+  // 기존 항목 제거 (emptyState 노드 제외)
+  Array.from(elTxnList.children).forEach(el => {
+    if (el.id !== 'emptyState') el.remove();
   });
-}
 
-function populateFilterCategories() {
-  const current = elFilterCat.value;
-  elFilterCat.innerHTML = '<option value="all">All Categories</option>';
-  const seen = new Set();
-  transactions.forEach(t => seen.add(t.category));
-  seen.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    if (c === current) o.selected = true;
-    elFilterCat.appendChild(o);
-  });
-}
-
-// ── Summary ───────────────────────────────────────────────────────────────────
-
-function updateSummary() {
-  const incomes  = transactions.filter(t => t.type === 'income');
-  const expenses = transactions.filter(t => t.type === 'expense');
-  const totalIn  = incomes.reduce((s, t) => s + t.amount, 0);
-  const totalEx  = expenses.reduce((s, t) => s + t.amount, 0);
-  const balance  = totalIn - totalEx;
-
-  elBalance.textContent = fmt(balance);
-  elBalanceNote.textContent = balance >= 0
-    ? (transactions.length ? 'You\'re in the green 🎉' : 'No transactions yet')
-    : 'Spending exceeds income';
-
-  elIncome.textContent      = fmt(totalIn);
-  elIncomeCount.textContent = `${incomes.length} transaction${incomes.length !== 1 ? 's' : ''}`;
-  elExpense.textContent     = fmt(totalEx);
-  elExpenseCount.textContent = `${expenses.length} transaction${expenses.length !== 1 ? 's' : ''}`;
-}
-
-// ── Transaction List ──────────────────────────────────────────────────────────
-
-function renderList() {
-  const typeFilter = elFilterType.value;
-  const catFilter  = elFilterCat.value;
-
-  let filtered = transactions.filter(t => {
-    if (typeFilter !== 'all' && t.type !== typeFilter) return false;
-    if (catFilter  !== 'all' && t.category !== catFilter) return false;
-    return true;
-  });
-
-  // Sort newest first
-  filtered = filtered.slice().sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
-
-  // Clear existing items (keep empty state node)
-  Array.from(elTxnList.querySelectorAll('.txn-item')).forEach(n => n.remove());
-
-  if (filtered.length === 0) {
+  if (sorted.length === 0) {
     elEmptyState.style.display = '';
     return;
   }
   elEmptyState.style.display = 'none';
 
-  filtered.forEach(t => {
-    const icon = CATEGORY_ICONS[t.category] || '📌';
-    const sign = t.type === 'income' ? '+' : '−';
-
+  sorted.forEach(t => {
     const item = document.createElement('div');
     item.className = 'txn-item';
     item.dataset.id = t.id;
-    item.innerHTML = `
-      <div class="txn-icon ${t.type}">${icon}</div>
-      <div class="txn-body">
-        <div class="txn-desc">${escHtml(t.description)}</div>
-        <div class="txn-meta">${escHtml(t.category)} &middot; ${fmtDate(t.date)}</div>
-      </div>
-      <div class="txn-amount ${t.type}">${sign}${fmt(t.amount)}</div>
-      <button class="txn-delete" data-id="${t.id}" aria-label="Delete transaction" title="Delete">✕</button>
-    `;
+
+    const sign = t.type === 'income' ? '+' : '-';
+    item.innerHTML =
+      '<span class="txn-date">' + escHtml(fmtDate(t.date)) + '</span>' +
+      '<span class="txn-note">' + escHtml(t.note || '(비고 없음)') + '</span>' +
+      '<span class="txn-amount ' + t.type + '">' + sign + fmtWon(t.amount) + '</span>' +
+      '<button class="txn-del-btn" data-id="' + t.id + '" aria-label="삭제">&#10005;</button>';
+
     elTxnList.appendChild(item);
   });
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ── Chart ─────────────────────────────────────────────────────────────────────
-
-function renderChart() {
-  if (transactions.length === 0) {
-    elChart.style.display = 'none';
-    elChartEmpty.style.display = '';
-    return;
-  }
-  elChart.style.display = '';
-  elChartEmpty.style.display = 'none';
-
-  // Build daily balance for last 30 days
-  const today = new Date();
-  const days = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
-  }
-
-  // Cumulative balance up to each day
-  const sorted = transactions.slice().sort((a, b) => a.date.localeCompare(b.date));
-
-  // Pre-compute balance before the window
-  const windowStart = days[0];
-  let baseBalance = 0;
-  sorted.forEach(t => {
-    if (t.date < windowStart) {
-      baseBalance += t.type === 'income' ? t.amount : -t.amount;
-    }
-  });
-
-  const dayMap = {};
-  days.forEach(d => { dayMap[d] = 0; });
-  sorted.forEach(t => {
-    if (t.date >= windowStart) {
-      if (dayMap[t.date] !== undefined) {
-        dayMap[t.date] += t.type === 'income' ? t.amount : -t.amount;
-      }
-    }
-  });
-
-  // Cumulative
-  const values = [];
-  let running = baseBalance;
-  days.forEach(d => {
-    running += dayMap[d];
-    values.push(running);
-  });
-
-  drawChart(elChart, days, values);
-}
-
-function drawChart(canvas, labels, values) {
-  const dpr    = window.devicePixelRatio || 1;
-  const w      = canvas.parentElement.clientWidth - 48;
-  const h      = 160;
-  canvas.width  = w * dpr;
-  canvas.height = h * dpr;
-  canvas.style.width  = w + 'px';
-  canvas.style.height = h + 'px';
-
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const pad = { top: 16, right: 16, bottom: 36, left: 60 };
-  const cw = w - pad.left - pad.right;
-  const ch = h - pad.top - pad.bottom;
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-
-  function xOf(i) { return pad.left + (i / (values.length - 1)) * cw; }
-  function yOf(v) { return pad.top + ch - ((v - min) / range) * ch; }
-
-  // Grid lines
-  ctx.strokeStyle = '#2e3350';
-  ctx.lineWidth = 1;
-  const ticks = 4;
-  for (let i = 0; i <= ticks; i++) {
-    const y = pad.top + (i / ticks) * ch;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(pad.left + cw, y);
-    ctx.stroke();
-
-    const val = max - (i / ticks) * range;
-    ctx.fillStyle = '#8892b0';
-    ctx.font = '10px system-ui';
-    ctx.textAlign = 'right';
-    ctx.fillText(fmtShort(val), pad.left - 6, y + 4);
-  }
-
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + ch);
-  grad.addColorStop(0, 'rgba(99,102,241,.45)');
-  grad.addColorStop(1, 'rgba(99,102,241,0)');
-
-  ctx.beginPath();
-  values.forEach((v, i) => {
-    const x = xOf(i), y = yOf(v);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.lineTo(xOf(values.length - 1), pad.top + ch);
-  ctx.lineTo(xOf(0), pad.top + ch);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  values.forEach((v, i) => {
-    const x = xOf(i), y = yOf(v);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = '#6366f1';
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
-
-  // Dots at transaction days — only show a few x-axis labels
-  const labelStep = Math.ceil(labels.length / 6);
-  ctx.fillStyle = '#8892b0';
-  ctx.font = '10px system-ui';
-  ctx.textAlign = 'center';
-  labels.forEach((d, i) => {
-    if (i % labelStep === 0 || i === labels.length - 1) {
-      const x = xOf(i);
-      ctx.fillText(shortDate(d), x, h - 8);
-    }
-  });
-
-  // Current value dot
-  const last = values.length - 1;
-  ctx.beginPath();
-  ctx.arc(xOf(last), yOf(values[last]), 5, 0, Math.PI * 2);
-  ctx.fillStyle = '#6366f1';
-  ctx.fill();
-  ctx.strokeStyle = '#1a1d27';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-}
-
-function fmtShort(n) {
-  if (Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(1) + 'k';
-  return '$' + n.toFixed(0);
-}
-
-function shortDate(iso) {
-  const d = new Date(iso + 'T00:00:00');
-  return (d.getMonth() + 1) + '/' + d.getDate();
-}
-
-// ── Full Render ───────────────────────────────────────────────────────────────
-
 function render() {
-  updateSummary();
-  populateFilterCategories();
-  renderList();
-  renderChart();
+  renderMonthLabel();
+  const txns = getMonthlyTxns();
+  renderSummary(txns);
+  renderList(txns);
 }
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// ── 탭 전환 ───────────────────────────────────────────────────────────────────
+
+function setAccount(account) {
+  currentAccount = account;
+
+  elTabGongeum.classList.toggle('active', account === 'gongeum');
+  elTabCar.classList.toggle('active', account === 'car');
+
+  document.body.classList.remove('account-gongeum', 'account-car');
+  document.body.classList.add('account-' + account);
+
+  render();
+}
+
+// ── 월 이동 ───────────────────────────────────────────────────────────────────
+
+elPrevMonth.addEventListener('click', () => {
+  currentMonth--;
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  render();
+});
+
+elNextMonth.addEventListener('click', () => {
+  currentMonth++;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  render();
+});
+
+// ── 계좌 탭 ───────────────────────────────────────────────────────────────────
+
+elTabGongeum.addEventListener('click', () => setAccount('gongeum'));
+elTabCar.addEventListener('click',     () => setAccount('car'));
+
+// ── 모달 ──────────────────────────────────────────────────────────────────────
+
+let selectedType = 'expense'; // 기본값: 출금
 
 function openModal() {
-  elFDate.value = new Date().toISOString().slice(0, 10);
-  populateCategorySelect(elFType.value, elFCat);
-  elFormErr.classList.add('hidden');
-  elForm.reset();
-  elFDate.value = new Date().toISOString().slice(0, 10);
-  elOverlay.classList.remove('hidden');
-  elFDesc.focus();
+  elInputDate.value   = new Date().toISOString().slice(0, 10);
+  elInputAmount.value = '';
+  elInputNote.value   = '';
+  setSegment('expense');
+  elModalOverlay.classList.remove('hidden');
+  setTimeout(() => elInputAmount.focus(), 150);
 }
 
 function closeModal() {
-  elOverlay.classList.add('hidden');
-  elForm.reset();
-  elFormErr.classList.add('hidden');
+  elModalOverlay.classList.add('hidden');
 }
 
-// ── Events ────────────────────────────────────────────────────────────────────
+function setSegment(type) {
+  selectedType = type;
+  elSegIncome.classList.remove('active', 'income-active', 'expense-active');
+  elSegExpense.classList.remove('active', 'income-active', 'expense-active');
 
-document.getElementById('btn-add-txn').addEventListener('click', openModal);
-document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-document.getElementById('btn-cancel').addEventListener('click', closeModal);
+  if (type === 'income') {
+    elSegIncome.classList.add('active', 'income-active');
+  } else {
+    elSegExpense.classList.add('active', 'expense-active');
+  }
+}
 
-elOverlay.addEventListener('click', e => { if (e.target === elOverlay) closeModal(); });
-
+elFabBtn.addEventListener('click', openModal);
+elModalClose.addEventListener('click', closeModal);
+elModalOverlay.addEventListener('click', e => {
+  if (e.target === elModalOverlay) closeModal();
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
 });
 
-elFType.addEventListener('change', () => {
-  populateCategorySelect(elFType.value, elFCat);
-});
+elSegIncome.addEventListener('click',  () => setSegment('income'));
+elSegExpense.addEventListener('click', () => setSegment('expense'));
 
-elForm.addEventListener('submit', e => {
-  e.preventDefault();
-  const desc   = elFDesc.value.trim();
-  const amount = parseFloat(elFAmount.value);
-  const type   = elFType.value;
-  const cat    = elFCat.value;
-  const date   = elFDate.value;
+elSubmitBtn.addEventListener('click', () => {
+  const dateVal   = elInputDate.value;
+  const amountStr = elInputAmount.value.trim();
+  const note      = elInputNote.value.trim();
 
-  if (!desc || isNaN(amount) || amount <= 0 || !date) {
-    elFormErr.classList.remove('hidden');
+  if (!dateVal) {
+    elInputDate.focus();
     return;
   }
-  elFormErr.classList.add('hidden');
+  const amount = parseFloat(amountStr);
+  if (!amountStr || isNaN(amount) || amount <= 0) {
+    elInputAmount.focus();
+    return;
+  }
 
-  const txn = { id: uid(), description: desc, amount, type, category: cat, date, createdAt: Date.now() };
-  transactions.push(txn);
-  saveData(transactions);
-  render();
+  const txn = {
+    id:        uid(),
+    type:      selectedType,
+    date:      dateVal,
+    amount:    amount,
+    note:      note,
+    createdAt: Date.now(),
+  };
+
+  addTransaction(currentAccount, txn);
   closeModal();
-  showToast(`Transaction added: ${type === 'income' ? '+' : '−'}${fmt(amount)}`);
+  render();
 });
+
+// ── 삭제 + 스낵바 (실행취소) ─────────────────────────────────────────────────
 
 elTxnList.addEventListener('click', e => {
-  const btn = e.target.closest('.txn-delete');
+  const btn = e.target.closest('.txn-del-btn');
   if (!btn) return;
+
   const id = btn.dataset.id;
-  const txn = transactions.find(t => t.id === id);
+  const txns = getTransactions(currentAccount);
+  const txn  = txns.find(t => t.id === id);
   if (!txn) return;
-  if (!confirm(`Delete "${txn.description}"?`)) return;
-  transactions = transactions.filter(t => t.id !== id);
-  saveData(transactions);
+
+  // 즉시 제거 (로컬스토리지에서도)
+  removeTransaction(currentAccount, id);
   render();
-  showToast('Transaction deleted.');
+
+  // 취소용 보관
+  pendingDelete = { txn, account: currentAccount };
+
+  // 기존 타이머 해제
+  if (undoTimer) clearTimeout(undoTimer);
+
+  // 스낵바 표시
+  elSnackbarMsg.textContent = '삭제됨';
+  elSnackbar.classList.remove('hidden');
+
+  // 3초 후 확정
+  undoTimer = setTimeout(() => {
+    pendingDelete = null;
+    elSnackbar.classList.add('hidden');
+  }, 3000);
 });
 
-elFilterType.addEventListener('change', renderList);
-elFilterCat.addEventListener('change', renderList);
+elSnackbarUndo.addEventListener('click', () => {
+  if (!pendingDelete) return;
 
-window.addEventListener('resize', () => {
-  if (transactions.length) renderChart();
+  clearTimeout(undoTimer);
+  const { txn, account } = pendingDelete;
+  pendingDelete = null;
+
+  // 복원
+  addTransaction(account, txn);
+  elSnackbar.classList.add('hidden');
+  render();
 });
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── 초기화 ───────────────────────────────────────────────────────────────────
 
-render();
+setAccount('gongeum');

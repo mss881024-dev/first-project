@@ -1,123 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FinTrack – Income & Expense Tracker</title>
+  <title>가계부</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <div class="header-inner">
-      <div class="logo">
-        <span class="logo-icon">💰</span>
-        <span class="logo-text">FinTrack</span>
-      </div>
-      <button id="btn-add-txn" class="btn btn-primary">+ Add Transaction</button>
+
+  <!-- 헤더 -->
+  <header class="app-header">
+    <h1 class="app-title">가계부</h1>
+    <div class="month-nav">
+      <button class="month-btn" id="prevMonth">&#8592;</button>
+      <span class="month-label" id="monthLabel"></span>
+      <button class="month-btn" id="nextMonth">&#8594;</button>
     </div>
   </header>
 
-  <main>
-    <!-- Summary Cards -->
-    <section class="summary-grid">
-      <div class="card card-balance">
-        <p class="card-label">Current Balance</p>
-        <h2 class="card-value" id="balance">$0.00</h2>
-        <p class="card-sub" id="balance-note">No transactions yet</p>
-      </div>
-      <div class="card card-income">
-        <p class="card-label">Total Income</p>
-        <h3 class="card-value" id="total-income">$0.00</h3>
-        <p class="card-sub" id="income-count">0 transactions</p>
-      </div>
-      <div class="card card-expense">
-        <p class="card-label">Total Expenses</p>
-        <h3 class="card-value" id="total-expense">$0.00</h3>
-        <p class="card-sub" id="expense-count">0 transactions</p>
-      </div>
-    </section>
+  <!-- 계좌 탭 -->
+  <div class="account-tabs">
+    <button class="tab-btn active" data-account="gongeum" id="tabGongeum">공금통장</button>
+    <button class="tab-btn" data-account="car" id="tabCar">자동차마통</button>
+  </div>
 
-    <!-- Chart -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Balance Over Time</h2>
-        <span class="section-hint">Last 30 days</span>
-      </div>
-      <div class="chart-wrap">
-        <canvas id="chart" height="160"></canvas>
-        <p class="chart-empty" id="chart-empty">Add transactions to see your balance trend.</p>
-      </div>
-    </section>
-
-    <!-- Transaction History -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Transaction History</h2>
-        <div class="filter-row">
-          <select id="filter-type" class="select-sm">
-            <option value="all">All</option>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </select>
-          <select id="filter-category" class="select-sm">
-            <option value="all">All Categories</option>
-          </select>
-        </div>
-      </div>
-      <div id="txn-list" class="txn-list">
-        <div class="empty-state" id="empty-state">
-          <div class="empty-icon">📋</div>
-          <p>No transactions yet.</p>
-          <p class="empty-sub">Click <strong>+ Add Transaction</strong> to get started.</p>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Modal -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div class="modal-header">
-        <h3 id="modal-title">Add Transaction</h3>
-        <button id="btn-close-modal" class="btn-icon" aria-label="Close">&times;</button>
-      </div>
-      <form id="txn-form" novalidate>
-        <div class="form-grid">
-          <div class="form-group full">
-            <label for="f-desc">Description</label>
-            <input id="f-desc" type="text" placeholder="e.g. Grocery run" required />
-          </div>
-          <div class="form-group">
-            <label for="f-amount">Amount ($)</label>
-            <input id="f-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required />
-          </div>
-          <div class="form-group">
-            <label for="f-type">Type</label>
-            <select id="f-type" required>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="f-category">Category</label>
-            <select id="f-category" required></select>
-          </div>
-          <div class="form-group">
-            <label for="f-date">Date</label>
-            <input id="f-date" type="date" required />
-          </div>
-        </div>
-        <p class="form-error hidden" id="form-error">Please fill in all required fields.</p>
-        <div class="form-actions">
-          <button type="button" id="btn-cancel" class="btn btn-ghost">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit">Add Transaction</button>
-        </div>
-      </form>
+  <!-- 요약 바 -->
+  <div class="summary-bar">
+    <div class="summary-item">
+      <span class="summary-label">잔액</span>
+      <span class="summary-value" id="sumBalance">₩0</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">입금</span>
+      <span class="summary-value income" id="sumIncome">₩0</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">출금</span>
+      <span class="summary-value expense" id="sumExpense">₩0</span>
     </div>
   </div>
 
-  <!-- Delete confirm toast -->
-  <div id="toast" class="toast hidden"></div>
+  <!-- 거래 목록 -->
+  <main class="transaction-list" id="transactionList">
+    <div class="empty-state" id="emptyState">거래 내역이 없습니다.</div>
+  </main>
+
+  <!-- FAB 버튼 -->
+  <button class="fab" id="fabBtn" aria-label="거래 추가">+</button>
+
+  <!-- 모달 오버레이 -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="거래 추가">
+      <div class="modal-header">
+        <span class="modal-title">거래 추가</span>
+        <button class="modal-close" id="modalClose" aria-label="닫기">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- 입금/출금 세그먼트 -->
+        <div class="segment-control">
+          <button class="segment-btn" data-type="income" id="segIncome">입금</button>
+          <button class="segment-btn active expense-active" data-type="expense" id="segExpense">출금</button>
+        </div>
+        <!-- 날짜 -->
+        <div class="form-group">
+          <label for="inputDate">날짜</label>
+          <input type="date" id="inputDate" class="form-control" />
+        </div>
+        <!-- 금액 -->
+        <div class="form-group">
+          <label for="inputAmount">금액 (원)</label>
+          <input type="number" id="inputAmount" class="form-control" placeholder="0" min="0" inputmode="numeric" />
+        </div>
+        <!-- 비고 -->
+        <div class="form-group">
+          <label for="inputNote">비고</label>
+          <input type="text" id="inputNote" class="form-control" placeholder="내용을 입력하세요" />
+        </div>
+        <button class="submit-btn" id="submitBtn">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 스낵바 -->
+  <div class="snackbar hidden" id="snackbar">
+    <span id="snackbarMsg">삭제됨</span>
+    <button class="snackbar-undo" id="snackbarUndo">실행취소</button>
+  </div>
 
   <script src="app.js"></script>
 </body>
