@@ -187,8 +187,9 @@ function seedData() {
     { id: uid(), type: 'income',  date: '2026-06-26', amount: 1537652,  note: '차 마통 여행경비 퓨전', createdAt: 21 },
     { id: uid(), type: 'income',  date: '2026-06-26', amount: 50625,    note: '차 마통 여행경비 르모어', createdAt: 22 },
   ];
-  if (!localStorage.getItem(STORAGE_KEYS.gongeum)) saveData('gongeum', gongeumData);
-  if (!localStorage.getItem(STORAGE_KEYS.car))     saveData('car', carData);
+  const g = loadData('gongeum'), c = loadData('car');
+  if (g.length === 0) saveData('gongeum', gongeumData);
+  if (c.length === 0) saveData('car', carData);
 }
 
 seedData();
