@@ -305,6 +305,51 @@ elSnackbarUndo.addEventListener('click', () => {
   render();
 });
 
+// ── 초기 데이터 시드 ──────────────────────────────────────────────────────────
+
+function seedData() {
+  const gongeumData = [
+    { id: uid(), type: 'income',  date: '2026-06-01', amount: 1100000,  note: '공금',           createdAt: 1 },
+    { id: uid(), type: 'expense', date: '2026-06-04', amount: 1114905,  note: '제주환불',        createdAt: 2 },
+    { id: uid(), type: 'expense', date: '2026-06-12', amount: 170000,   note: '차입금원금상환',  createdAt: 3 },
+    { id: uid(), type: 'expense', date: '2026-06-15', amount: 100000,   note: '돌잔치',          createdAt: 4 },
+    { id: uid(), type: 'expense', date: '2026-06-18', amount: 150000,   note: '상현이 빌려줌',   createdAt: 5 },
+    { id: uid(), type: 'expense', date: '2026-06-18', amount: 7000,     note: '더로우 수수료',   createdAt: 6 },
+    { id: uid(), type: 'expense', date: '2026-06-26', amount: 205000,   note: '자동차세',        createdAt: 7 },
+    { id: uid(), type: 'expense', date: '2026-06-26', amount: 1114905,  note: '베트남경비',      createdAt: 8 },
+    { id: uid(), type: 'income',  date: '2026-06-26', amount: 200000,   note: '차입금원금상환',  createdAt: 9 },
+  ];
+
+  const carData = [
+    { id: uid(), type: 'expense', date: '2026-04-25', amount: 27010069, note: '잔액',               createdAt: 1 },
+    { id: uid(), type: 'expense', date: '2026-05-06', amount: 912000,   note: '자동차 원금',         createdAt: 2 },
+    { id: uid(), type: 'expense', date: '2026-05-09', amount: 700000,   note: '상현이 빌림',         createdAt: 3 },
+    { id: uid(), type: 'expense', date: '2026-05-15', amount: 135238,   note: '대출이자',            createdAt: 4 },
+    { id: uid(), type: 'income',  date: '2026-05-18', amount: 10000000, note: '사업자대출',          createdAt: 5 },
+    { id: uid(), type: 'income',  date: '2026-05-20', amount: 10000000, note: '사업자대출',          createdAt: 6 },
+    { id: uid(), type: 'income',  date: '2026-05-21', amount: 10000000, note: '사업자대출',          createdAt: 7 },
+    { id: uid(), type: 'income',  date: '2026-05-23', amount: 10000000, note: '사업자대출',          createdAt: 8 },
+    { id: uid(), type: 'income',  date: '2026-05-25', amount: 700000,   note: '상현이 갚음',         createdAt: 9 },
+    { id: uid(), type: 'expense', date: '2026-05-25', amount: 1000000,  note: '생활비',              createdAt: 10 },
+    { id: uid(), type: 'income',  date: '2026-05-26', amount: 10000000, note: '사업자대출',          createdAt: 11 },
+    { id: uid(), type: 'expense', date: '2026-05-28', amount: 5000000,  note: '이자 방어용 이동',    createdAt: 12 },
+    { id: uid(), type: 'expense', date: '2026-06-04', amount: 700000,   note: '2년 뒤 갚을 예정',   createdAt: 13 },
+    { id: uid(), type: 'expense', date: '2026-06-04', amount: 500000,   note: '8월에 갚을 예정',    createdAt: 14 },
+    { id: uid(), type: 'expense', date: '2026-06-07', amount: 911828,   note: '자동차 원금',         createdAt: 15 },
+    { id: uid(), type: 'income',  date: '2026-06-08', amount: 912000,   note: '자동차 원금',         createdAt: 16 },
+    { id: uid(), type: 'expense', date: '2026-06-15', amount: 21482,    note: '대출이자',            createdAt: 17 },
+    { id: uid(), type: 'expense', date: '2026-06-23', amount: 1065000,  note: '주식 구매',           createdAt: 18 },
+    { id: uid(), type: 'income',  date: '2026-06-26', amount: 616200,   note: '차 마통 여행경비',    createdAt: 19 },
+    { id: uid(), type: 'income',  date: '2026-06-26', amount: 50998,    note: '차 마통 여행경비 르모어', createdAt: 20 },
+    { id: uid(), type: 'income',  date: '2026-06-26', amount: 1537652,  note: '차 마통 여행경비 퓨전', createdAt: 21 },
+    { id: uid(), type: 'income',  date: '2026-06-26', amount: 50625,    note: '차 마통 여행경비 르모어', createdAt: 22 },
+  ];
+
+  if (!localStorage.getItem(STORAGE_KEYS.gongeum)) saveData('gongeum', gongeumData);
+  if (!localStorage.getItem(STORAGE_KEYS.car))     saveData('car', carData);
+}
+
 // ── 초기화 ───────────────────────────────────────────────────────────────────
 
+seedData();
 setAccount('gongeum');
