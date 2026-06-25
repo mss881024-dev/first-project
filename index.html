@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- 헤더 -->
   <header class="app-header">
     <h1 class="app-title">가계부</h1>
     <div class="month-nav">
@@ -18,62 +17,53 @@
     </div>
   </header>
 
-  <!-- 계좌 탭 -->
   <div class="account-tabs">
     <button class="tab-btn active" data-account="gongeum" id="tabGongeum">공금통장</button>
     <button class="tab-btn" data-account="car" id="tabCar">자동차마통</button>
   </div>
 
-  <!-- 요약 바 -->
   <div class="summary-bar">
     <div class="summary-item">
-      <span class="summary-label">잔액</span>
+      <span class="summary-label">누적 잠액</span>
       <span class="summary-value" id="sumBalance">₩0</span>
     </div>
     <div class="summary-divider"></div>
     <div class="summary-item">
-      <span class="summary-label">입금</span>
+      <span class="summary-label">이번달 입금</span>
       <span class="summary-value income" id="sumIncome">₩0</span>
     </div>
     <div class="summary-divider"></div>
     <div class="summary-item">
-      <span class="summary-label">출금</span>
+      <span class="summary-label">이번달 출금</span>
       <span class="summary-value expense" id="sumExpense">₩0</span>
     </div>
   </div>
 
-  <!-- 거래 목록 -->
   <main class="transaction-list" id="transactionList">
     <div class="empty-state" id="emptyState">거래 내역이 없습니다.</div>
   </main>
 
-  <!-- FAB 버튼 -->
   <button class="fab" id="fabBtn" aria-label="거래 추가">+</button>
 
-  <!-- 모달 오버레이 -->
   <div class="modal-overlay hidden" id="modalOverlay">
-    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="거래 추가">
+    <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
         <span class="modal-title">거래 추가</span>
-        <button class="modal-close" id="modalClose" aria-label="닫기">&times;</button>
+        <button class="modal-close" id="modalClose">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- 입금/출금 세그먼트 -->
         <div class="segment-control">
           <button class="segment-btn" data-type="income" id="segIncome">입금</button>
           <button class="segment-btn active expense-active" data-type="expense" id="segExpense">출금</button>
         </div>
-        <!-- 날짜 -->
         <div class="form-group">
           <label for="inputDate">날짜</label>
           <input type="date" id="inputDate" class="form-control" />
         </div>
-        <!-- 금액 -->
         <div class="form-group">
           <label for="inputAmount">금액 (원)</label>
           <input type="number" id="inputAmount" class="form-control" placeholder="0" min="0" inputmode="numeric" />
         </div>
-        <!-- 비고 -->
         <div class="form-group">
           <label for="inputNote">비고</label>
           <input type="text" id="inputNote" class="form-control" placeholder="내용을 입력하세요" />
@@ -83,7 +73,6 @@
     </div>
   </div>
 
-  <!-- 스낵바 -->
   <div class="snackbar hidden" id="snackbar">
     <span id="snackbarMsg">삭제됨</span>
     <button class="snackbar-undo" id="snackbarUndo">실행취소</button>
