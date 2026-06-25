@@ -109,9 +109,14 @@ function getMonthlyTxns() {
 }
 
 function renderSummary(txns) {
+  // 이번 달 입금/출금
   const income  = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const balance = income - expense;
+  // 전체 누적 잔액
+  const all     = getTransactions(currentAccount);
+  const totalIn  = all.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalOut = all.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance  = totalIn - totalOut;
 
   elSumBalance.textContent = fmtWon(balance);
   elSumBalance.className   = 'summary-value' + (balance >= 0 ? ' positive' : ' negative');
