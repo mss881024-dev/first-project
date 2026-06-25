@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTrack – Income & Expense Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">💰</span>
+        <span class="logo-text">FinTrack</span>
+      </div>
+      <button id="btn-add-txn" class="btn btn-primary">+ Add Transaction</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Summary Cards -->
+    <section class="summary-grid">
+      <div class="card card-balance">
+        <p class="card-label">Current Balance</p>
+        <h2 class="card-value" id="balance">$0.00</h2>
+        <p class="card-sub" id="balance-note">No transactions yet</p>
+      </div>
+      <div class="card card-income">
+        <p class="card-label">Total Income</p>
+        <h3 class="card-value" id="total-income">$0.00</h3>
+        <p class="card-sub" id="income-count">0 transactions</p>
+      </div>
+      <div class="card card-expense">
+        <p class="card-label">Total Expenses</p>
+        <h3 class="card-value" id="total-expense">$0.00</h3>
+        <p class="card-sub" id="expense-count">0 transactions</p>
+      </div>
+    </section>
+
+    <!-- Chart -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Balance Over Time</h2>
+        <span class="section-hint">Last 30 days</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart" height="160"></canvas>
+        <p class="chart-empty" id="chart-empty">Add transactions to see your balance trend.</p>
+      </div>
+    </section>
+
+    <!-- Transaction History -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Transaction History</h2>
+        <div class="filter-row">
+          <select id="filter-type" class="select-sm">
+            <option value="all">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="filter-category" class="select-sm">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+      </div>
+      <div id="txn-list" class="txn-list">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">📋</div>
+          <p>No transactions yet.</p>
+          <p class="empty-sub">Click <strong>+ Add Transaction</strong> to get started.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Transaction</h3>
+        <button id="btn-close-modal" class="btn-icon" aria-label="Close">&times;</button>
+      </div>
+      <form id="txn-form" novalidate>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="f-desc">Description</label>
+            <input id="f-desc" type="text" placeholder="e.g. Grocery run" required />
+          </div>
+          <div class="form-group">
+            <label for="f-amount">Amount ($)</label>
+            <input id="f-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required />
+          </div>
+          <div class="form-group">
+            <label for="f-type">Type</label>
+            <select id="f-type" required>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="f-category">Category</label>
+            <select id="f-category" required></select>
+          </div>
+          <div class="form-group">
+            <label for="f-date">Date</label>
+            <input id="f-date" type="date" required />
+          </div>
+        </div>
+        <p class="form-error hidden" id="form-error">Please fill in all required fields.</p>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit">Add Transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirm toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
