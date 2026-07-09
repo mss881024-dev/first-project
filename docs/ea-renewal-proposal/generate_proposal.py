@@ -25,7 +25,7 @@ SW, SH = Inches(13.333), Inches(7.5)
 MX = Inches(0.7)                        # 좌우 마진
 CW = Inches(11.933)                     # 콘텐츠 폭
 TOTAL_PAGES = 15
-DOC_FOOT = "동아그룹 Microsoft 라이선스 갱신 제안서  |  2026.03.31 ~ 2028.04.01"
+DOC_FOOT = "동아그룹 Microsoft 라이선스 갱신 제안서  |  2024.03.31 ~ 2027.04.01"
 
 
 def style_run(run, size, bold=False, color=BODY, italic=False):
@@ -205,7 +205,7 @@ add_text(s, MX, Inches(1.85), Inches(11), Inches(1.9),
 hline(s, MX, Inches(3.75), Inches(9.0), 0.75, HAIR)
 add_text(s, MX, Inches(4.05), Inches(10.5), Inches(1.7),
          [([("계약기간   ", 12, True, NAVY),
-            ("2026. 03. 31 ~ 2028. 04. 01  (3년 차 갱신)", 12, False, BODY)],),
+            ("2024. 03. 31 ~ 2027. 04. 01  (3년 차 갱신)", 12, False, BODY)],),
           ([("계약 구성   ", 12, True, NAVY),
             ("EA(M365 E3) · SCE(서버) · 기타 라이선스(Copilot 등)", 12, False, BODY)],),
           ([("대상 법인   ", 12, True, NAVY),
@@ -628,7 +628,7 @@ s = new_slide()
 header(s, "12  |  TERMS & NEXT STEPS", "계약 조건 요약 및 진행 일정", 14, title_size=20)
 rows = [
     ["항목", ("내용", {"align": L})],
-    ["계약기간", ("2026. 03. 31 ~ 2028. 04. 01  (3년 차 갱신)", {"align": L})],
+    ["계약기간", ("2024. 03. 31 ~ 2027. 04. 01  (3년 차 갱신)", {"align": L})],
     ["계약 구성", ("EA(M365 E3) + SCE(서버) + 기타 라이선스", {"align": L})],
     ["단가 조건", ("EA Renewal·SCE 전 품목 전년 동결", {"align": L})],
     ["부가세", ("별도 (VAT 미포함 금액 기준)", {"align": L})],
@@ -646,8 +646,8 @@ add_text(s, sx, Inches(1.6), Inches(5.5), Inches(0.25),
 steps = [
     ("STEP 1", "제안서 검토 및 회사별 수량 확정"),
     ("STEP 2", "견적 확정 및 내부 품의"),
-    ("STEP 3", "계약 체결 (2026. 03. 31 발효)"),
-    ("STEP 4", "갱신 적용 및 연중 True-up 관리 지원"),
+    ("STEP 3", "3년 차(26Y) 갱신 물량 확정"),
+    ("STEP 4", "확정분 반영 및 연중 True-up 관리 지원"),
 ]
 for i, (st, d) in enumerate(steps):
     y = Emu(int(Inches(2.0)) + i * int(Inches(0.72)))
