@@ -149,7 +149,7 @@ add_text(s, Inches(1.0), Inches(2.0), Inches(11.3), Inches(0.5),
 add_text(s, Inches(1.0), Inches(2.55), Inches(11.3), Inches(1.8),
          [("동아그룹 주요 4개사", 40, True, WHITE),
           ("Microsoft EA 라이선스 갱신 제안서", 40, True, WHITE)], space_after=8)
-add_text(s, Inches(1.0), Inches(3.95), Inches(11.3), Inches(0.5),
+add_text(s, Inches(1.0), Inches(4.15), Inches(11.3), Inches(0.4),
          [("지난 3년간 쌓아온 신뢰를 바탕으로, 다음 성장 단계까지 함께하겠습니다.",
            14, False, RGBColor(0xBD, 0xD7, 0xEE))])
 add_text(s, Inches(1.0), Inches(4.85), Inches(11.3), Inches(1.6),
