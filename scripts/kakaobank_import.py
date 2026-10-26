@@ -333,8 +333,11 @@ def link_transfers(accounts, window_days=2):
             bare_self = SELF_NAME and (not key_words(a['note']) or not key_words(b['note']))
             if not bare_self and not (key_words(a['note']) & key_words(b['note'])):
                 continue
-            for r, d in ((a, 'out'), (b, 'in')):
+            for r, d, counter in ((a, 'out', acct_b), (b, 'in', acct_a)):
                 r['type'], r['category'], r['dir'] = 'transfer', '계좌이동', d
+                # 상대 계좌를 남긴다. 짝이 없는 자기이체는 다른 은행(급여계좌 등)에서
+                # 온 돈이라, 월급으로 이미 센 돈을 또 더하지 않으려면 구분이 필요하다.
+                r['peerAcct'] = counter
                 r.pop('peer', None)
             used.add(id(a)); used.add(id(b))
             linked.append((a['date'], a['amount'], acct_a, acct_b, a['note'], b['note']))

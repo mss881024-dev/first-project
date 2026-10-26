@@ -46,9 +46,7 @@ function loadSettings() {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
     return {
       salary: raw.salary || DEFAULT_SALARY,
-      // 매달 차마통에서 공금마통으로 옮겨 생활비에 보태는 돈. 마통에서 나오는 돈이라
-      // 계좌 간 이동이지만 쓸 수 있는 돈이 그만큼 늘어난다.
-      topup: raw.topup || 0,
+
       overrides: raw.overrides || {},
     };
   } catch { return { salary: DEFAULT_SALARY, topup: 0, overrides: {} }; }
@@ -59,7 +57,13 @@ function salaryFor(mKey) {
   const s = loadSettings();
   return mKey in s.overrides ? s.overrides[mKey] : s.salary;
 }
-function topupFor() { return loadSettings().topup; }
+// 차마통에서 공금마통으로 실제로 옮겨온 돈. 고정값이 아니라 그 달 실제 이동액을 쓴다.
+// 짝이 확인된 이동만 센다 — 짝 없는 자기이체는 급여계좌에서 온 돈이라 월급과 중복된다.
+function topupFor(mKey) {
+  return getMonthlyTxns(BUDGET_ACCOUNT, mKey)
+    .filter(t => t.type === 'transfer' && t.peerAcct && t.peerAcct !== BUDGET_ACCOUNT)
+    .reduce((s,t) => s + (t.dir === 'in' ? t.amount : -t.amount), 0);
+}
 
 function loadData(account) {
   try {
@@ -85,6 +89,7 @@ function normalize(t) {
     // 카드는 '언제 긁었나'(date)와 '언제 빠지나'(bm, 청구월)가 다르다. 집계는 bm 기준.
     bm: /^\d{4}-\d{2}$/.test(String(t.bm || '')) ? t.bm : String(t.date || '').slice(0,7),
     bal: typeof t.bal === 'number' ? t.bal : null,  // 명세서의 '거래 후 잔액'
+    peerAcct: t.peerAcct || '',  // 계좌이동의 상대 계좌
     issuer: t.issuer || '',   // 카드 거래: 국민/BC/현대
     peer: t.peer || '',       // 대차 거래: 상대방
     note: t.note || '',
@@ -138,7 +143,6 @@ const elOvWarn       = el('ovWarn');
 const elOvSalaryEdit = el('ovSalaryEdit');
 const elOvTopupRow   = el('ovTopupRow');
 const elOvTopup      = el('ovTopup');
-const elOvTopupEdit  = el('ovTopupEdit');
 const elDebtPanel    = el('debtPanel');
 const elDebtList     = el('debtList');
 const elDebtEmpty    = el('debtEmpty');
@@ -197,7 +201,7 @@ function renderSummary(txns) {
 function monthTotals(mKey) {
   let otherIncome = 0, bankSpend = 0, moved = 0, cardPaid = 0;
   const income = salaryFor(mKey);   // 월급은 급여 계좌로 들어오므로 설정값으로 대리한다
-  const topup  = topupFor();        // 차마통에서 끌어와 생활비에 보태는 고정액
+  const topup  = topupFor(mKey);    // 차마통에서 실제로 옮겨온 돈 (그 달치)
   [BUDGET_ACCOUNT].forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
       // 내 계좌끼리 옮긴 돈은 흐름이 두 번 찍히지만 실제로는 늘지도 줄지도 않는다.
@@ -225,7 +229,8 @@ function renderOverview() {
   elOvIncome.textContent = '+' + fmtWon(t.income);
   elOvSalaryEdit.dataset.month = mKey;
   elOvTopupRow.style.display = t.topup === 0 ? 'none' : '';
-  elOvTopup.textContent = '+' + fmtWon(t.topup);
+  elOvTopup.textContent = (t.topup < 0 ? '-' : '+') + fmtWon(t.topup);
+  elOvTopup.className = 'ov-amt ' + (t.topup < 0 ? 'expense' : 'income');
   elOvCard.textContent   = '-' + fmtWon(t.cardUse);
   elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
   elOvInRow.style.display = t.otherIncome === 0 ? 'none' : '';
@@ -496,14 +501,6 @@ function showSnackbar(msg, undoable) {
   elSnackbar.classList.remove('hidden');
   if (!undoable) setTimeout(() => elSnackbar.classList.add('hidden'), 2500);
 }
-
-elOvTopupEdit.addEventListener('click', () => {
-  const s = loadSettings();
-  const input = prompt('매달 차마통에서 공금마통으로 끌어와 생활비에 보태는 금액.\n0을 넣으면 줄이 사라집니다.', s.topup);
-  if (input === null) return;
-  s.topup = parseInt(String(input).replace(/[^0-9]/g, ''), 10) || 0;
-  saveSettings(s); render();
-});
 
 elOvSalaryEdit.addEventListener('click', () => {
   const mKey = elOvSalaryEdit.dataset.month;
