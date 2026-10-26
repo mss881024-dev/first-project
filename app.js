@@ -69,10 +69,11 @@ function loadSettings() {
       etc: raw.etc || [],             // 기타 (밥값·용돈 등)
       separate: raw.separate || [],   // 별도 결제 건 — 참고만, 총계에 넣지 않음
       overrides: raw.overrides || {}, // 월별 월급 덮어쓰기
-      extraIn: raw.extraIn || {},     // 월별 추가 수입 — {"2026-11":[{name,amount}]}
+      income: raw.income || [],       // 월급·마통 외에 매달 들어오는 돈 (예: 자사주 보전)
+      extraIn: raw.extraIn || {},     // 그 달에만 들어온 돈 — {"2026-11":[{name,amount}]}
     };
   } catch {
-    return { salary: DEFAULT_SALARY, topup: 0, fixed: [], etc: [], separate: [], overrides: {}, extraIn: {} };
+    return { salary: DEFAULT_SALARY, topup: 0, income: [], fixed: [], etc: [], separate: [], overrides: {}, extraIn: {} };
   }
 }
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
@@ -253,13 +254,15 @@ function householdTotals(mKey) {
     byIssuer[k] = (byIssuer[k] || 0) + t.amount;
   });
 
-  // 월급·마통 말고 그 달에만 따로 들어온 돈 (예: 자사주 선입금)
+  // 매달 들어오는 추가 수입 + 그 달에만 들어온 돈
+  const income = cfg.income;
   const extraIn = (cfg.extraIn && cfg.extraIn[mKey]) || [];
-  const extraInTotal = extraIn.reduce((s,i) => s + (i.amount||0), 0);
+  const incomeRows = income.concat(extraIn);
+  const incomeTotal = incomeRows.reduce((s,i) => s + (i.amount||0), 0);
 
-  const inflow = salary + topup + extraInTotal;
+  const inflow = salary + topup + incomeTotal;
   const spent  = fixedTotal + cardUse + etcTotal;
-  return { salary, topup, extraIn, extraInTotal, inflow, fixed, fixedTotal, etc, etcTotal, separate,
+  return { salary, topup, incomeRows, incomeTotal, inflow, fixed, fixedTotal, etc, etcTotal, separate,
            cardUse, cardElse, byIssuer, bankSpend, byCat, spent, left: inflow - spent };
 }
 
@@ -294,7 +297,7 @@ function renderHousehold() {
   elHsIn.innerHTML =
     line('월급 <button class="hs-edit" data-edit="salary">수정</button>', '+' + won(h.salary), 'income') +
     (h.topup ? line('마통에서', '+' + won(h.topup), 'income') : '') +
-    h.extraIn.map(i => line(i.name, '+' + won(i.amount||0), 'income')).join('') +
+    h.incomeRows.map(i => line(i.name, '+' + won(i.amount||0), 'income')).join('') +
     sub('+' + won(h.inflow), 'income');
 
   elHsFixed.innerHTML = h.fixed.length
@@ -643,7 +646,7 @@ function parseImport(text) {
   if (data && data.settings) {
     const cur = loadSettings(), inc = data.settings;
     ['salary','topup'].forEach(k => { if (typeof inc[k] === 'number') cur[k] = inc[k]; });
-    ['fixed','etc','separate'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
+    ['income','fixed','etc','separate'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
     if (inc.overrides && typeof inc.overrides === 'object') {
       Object.keys(inc.overrides).forEach(m => { cur.overrides[m] = inc.overrides[m]; });
     }
