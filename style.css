@@ -354,3 +354,28 @@ select.form-control { appearance: none; }
   border-radius: 10px; padding: 13px; font-size: 0.85rem; font-weight: 700;
   cursor: pointer; margin-top: 4px;
 }
+
+/* ---------- 당월 현금흐름 (빠질 거 빠지고 남은 돈) ---------- */
+.cash-flow {
+  background: var(--card);
+  margin: 16px 16px 0;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+.cf-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; }
+.cf-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.cf-label em { font-style: normal; font-size: 0.68rem; opacity: 0.75; margin-left: 4px; }
+.cf-amt { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.3px; }
+.cf-amt.income   { color: var(--income); }
+.cf-amt.expense  { color: var(--expense); }
+.cf-amt.negative { color: var(--expense); }
+.cf-total {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px;
+}
+.cf-left-label { font-size: 0.85rem; font-weight: 700; }
+.cf-left-label em { font-style: normal; font-size: 0.68rem; color: var(--muted); font-weight: 600; margin-left: 4px; }
+.cf-left-amt { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.8px; }
+.cf-left-amt.positive { color: var(--income); }
+.cf-left-amt.negative { color: var(--expense); }

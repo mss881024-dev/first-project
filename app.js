@@ -13,8 +13,10 @@ const CATEGORIES = [
   '대출·이자', '투자', '대차(빌림·빌려줌)', '카드대금', '기타',
 ];
 const TRANSFER_CATEGORY = '계좌이동';
-// 통장의 '카드대금' 출금은 카드 탭의 상세 N건과 이중 계상되므로 지출 집계에서 뺀다.
-const EXCLUDED_FROM_SPENDING = ['카드대금'];
+// 지출(소비) 집계에서 빼는 카테고리. 잔액에는 그대로 반영된다.
+//  - 카드대금: 카드 탭의 상세 N건과 이중 계상되므로 제외
+//  - 대차·투자: 돈은 나가지만 소비가 아니므로 제외 ('이번달 얼마 썼나'를 정확히 보려고)
+const EXCLUDED_FROM_SPENDING = ['카드대금', '대차(빌림·빌려줌)', '투자'];
 
 let currentAccount = 'gongeum';
 let currentYear    = new Date().getFullYear();
@@ -56,6 +58,16 @@ function fmtDate(iso) { const p = iso.split('-'); return parseInt(p[1],10) + '.'
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function monthKey(y, m) { return y + '-' + String(m).padStart(2,'0'); }
 function prevMonthKey() { return currentMonth === 1 ? monthKey(currentYear-1, 12) : monthKey(currentYear, currentMonth-1); }
+function lastDayOf(y, m) { return new Date(y, m, 0).getDate(); }
+function monthEnd(y, m) { return monthKey(y, m) + '-' + String(lastDayOf(y, m)).padStart(2,'0'); }
+function isInflow(t)  { return t.type === 'income'  || (t.type === 'transfer' && t.dir === 'in');  }
+function isOutflow(t) { return t.type === 'expense' || (t.type === 'transfer' && t.dir === 'out'); }
+// 해당 날짜까지의 잔액. '당월말에 얼마 남았나'를 보려면 당월 말일로 끊어야 한다.
+function balanceAsOf(account, dateStr) {
+  return getTransactions(account)
+    .filter(t => t.date <= dateStr)
+    .reduce((s,t) => s + (isInflow(t) ? t.amount : -t.amount), 0);
+}
 function isSpending(t) { return t.type === 'expense' && EXCLUDED_FROM_SPENDING.indexOf(t.category) === -1; }
 function txnKey(t) { return [t.date, t.type, t.dir, t.amount, t.category, t.note].join('|'); }
 
@@ -63,8 +75,14 @@ const el = id => document.getElementById(id);
 const elMonthLabel   = el('monthLabel');
 const elTabs         = el('accountTabs');
 const elSumSpending  = el('sumSpending');
-const elSumIncome    = el('sumIncome');
-const elSumBalance   = el('sumBalance');
+const elCashFlow     = el('cashFlow');
+const elCardFlow     = el('cardFlow');
+const elCfCarry      = el('cfCarry');
+const elCfIn         = el('cfIn');
+const elCfOut        = el('cfOut');
+const elCfLeft       = el('cfLeft');
+const elCardUse      = el('cardUse');
+const elCardPrev     = el('cardPrev');
 const elSpendDelta   = el('spendDelta');
 const elCatSection   = el('categorySection');
 const elCatList      = el('categoryList');
@@ -96,19 +114,10 @@ function getMonthlyTxns(account, mKey) {
 
 function renderSummary(txns) {
   const spending = txns.filter(isSpending).reduce((s,t) => s + t.amount, 0);
-  const income   = txns.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
-
-  const all      = getTransactions(currentAccount);
-  const inflow   = all.filter(t => t.type === 'income'  || (t.type === 'transfer' && t.dir === 'in'))
-                      .reduce((s,t) => s + t.amount, 0);
-  const outflow  = all.filter(t => t.type === 'expense' || (t.type === 'transfer' && t.dir === 'out'))
-                      .reduce((s,t) => s + t.amount, 0);
-  const balance  = inflow - outflow;
-
   elSumSpending.textContent = fmtWon(spending);
-  elSumIncome.textContent   = fmtWon(income);
-  elSumBalance.textContent  = fmtWon(balance);
-  elSumBalance.className    = 'summary-value' + (balance >= 0 ? ' positive' : ' negative');
+
+  if (currentAccount === 'card') { renderCardFlow(txns); }
+  else { renderCashFlow(txns); }
 
   const prev = getMonthlyTxns(currentAccount, prevMonthKey()).filter(isSpending).reduce((s,t) => s + t.amount, 0);
   if (prev === 0 && spending === 0) { elSpendDelta.textContent = ''; return; }
@@ -117,6 +126,33 @@ function renderSummary(txns) {
   const pct  = Math.round(Math.abs(diff) / prev * 100);
   elSpendDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + fmtWon(diff) + ' (' + pct + '%)';
   elSpendDelta.className = 'spend-delta' + (diff > 0 ? ' up' : diff < 0 ? ' down' : '');
+}
+
+// 통장 탭: 이월 → 당월 입금 → 당월 출금(카드대금·이체·대차 전부) → 당월말 남은 잔액
+function renderCashFlow(txns) {
+  elCashFlow.style.display = ''; elCardFlow.style.display = 'none';
+
+  const prevEnd = currentMonth === 1 ? monthEnd(currentYear-1, 12) : monthEnd(currentYear, currentMonth-1);
+  const carry = balanceAsOf(currentAccount, prevEnd);
+  const inAmt  = txns.filter(isInflow).reduce((s,t) => s + t.amount, 0);
+  const outAmt = txns.filter(isOutflow).reduce((s,t) => s + t.amount, 0);
+  const left   = carry + inAmt - outAmt;
+
+  elCfCarry.textContent = (carry < 0 ? '-' : '') + fmtWon(carry);
+  elCfCarry.className   = 'cf-amt' + (carry < 0 ? ' negative' : '');
+  elCfIn.textContent    = '+' + fmtWon(inAmt);
+  elCfOut.textContent   = '-' + fmtWon(outAmt);
+  elCfLeft.textContent  = (left < 0 ? '-' : '') + fmtWon(left);
+  elCfLeft.className    = 'cf-left-amt' + (left < 0 ? ' negative' : ' positive');
+}
+
+// 카드 탭: 잔액 개념이 없으니 '당월 사용액 = 다음 결제 예정액'을 보여준다
+function renderCardFlow(txns) {
+  elCashFlow.style.display = 'none'; elCardFlow.style.display = '';
+  const use  = txns.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const prev = getMonthlyTxns('card', prevMonthKey()).filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  elCardUse.textContent  = fmtWon(use);
+  elCardPrev.textContent = fmtWon(prev);
 }
 
 function renderCategories(txns) {
@@ -294,15 +330,17 @@ function doImport(text) {
   let added = 0, skipped = 0, bad = 0;
   Object.keys(buckets).forEach(acct => {
     const existing = getTransactions(acct);
-    const seen = {};
-    existing.forEach(t => { seen[txnKey(t)] = true; });
+    // 같은 건이 이미 저장된 '건수'만큼만 건너뛴다. 명세서에 2건이면 2건 다 들어가고,
+    // 같은 파일을 다시 가져오면 0건 추가가 된다.
+    const have = {};
+    existing.forEach(t => { const k = txnKey(t); have[k] = (have[k] || 0) + 1; });
     buckets[acct].forEach(raw => {
       if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(String(raw.date)) || !(Math.abs(Number(raw.amount)) > 0)) { bad++; return; }
       const t = normalize(raw);
       if (!t.createdAt) t.createdAt = Date.now();
       const k = txnKey(t);
-      if (seen[k]) { skipped++; return; }   // 같은 날짜·금액·내용은 중복으로 보고 건너뛴다
-      seen[k] = true; existing.push(t); added++;
+      if (have[k] > 0) { have[k]--; skipped++; return; }
+      existing.push(t); added++;
     });
     saveData(acct, existing);
   });

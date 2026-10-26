@@ -30,17 +30,23 @@
     <span class="spend-delta" id="spendDelta"></span>
   </section>
 
-  <div class="summary-bar">
-    <div class="summary-item">
-      <span class="summary-label">이번달 입금</span>
-      <span class="summary-value income" id="sumIncome">₩0</span>
+  <section class="cash-flow" id="cashFlow">
+    <div class="cf-row"><span class="cf-label">이월 (전월말 잔액)</span><span class="cf-amt" id="cfCarry">₩0</span></div>
+    <div class="cf-row"><span class="cf-label">당월 입금</span><span class="cf-amt income" id="cfIn">+₩0</span></div>
+    <div class="cf-row"><span class="cf-label">당월 출금 <em>카드대금·이체·대차 전부</em></span><span class="cf-amt expense" id="cfOut">-₩0</span></div>
+    <div class="cf-total">
+      <span class="cf-left-label">당월말 남은 잔액</span>
+      <span class="cf-left-amt positive" id="cfLeft">₩0</span>
     </div>
-    <div class="summary-divider"></div>
-    <div class="summary-item">
-      <span class="summary-label">누적 잔액</span>
-      <span class="summary-value" id="sumBalance">₩0</span>
+  </section>
+
+  <section class="cash-flow" id="cardFlow" style="display:none">
+    <div class="cf-total">
+      <span class="cf-left-label">당월 사용액 <em>다음 결제 예정</em></span>
+      <span class="cf-left-amt negative" id="cardUse">₩0</span>
     </div>
-  </div>
+    <div class="cf-row"><span class="cf-label">전월 사용액</span><span class="cf-amt" id="cardPrev">₩0</span></div>
+  </section>
 
   <section class="category-section" id="categorySection" style="display:none">
     <h2 class="section-title">카테고리별 지출</h2>
@@ -100,7 +106,7 @@
         <button class="modal-close" id="dataClose">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="data-help">내보내기로 백업하고, 정리된 JSON을 붙여넣거나 파일로 가져옵니다. 같은 날짜·금액·내용은 중복으로 보고 자동으로 건너뜁니다.</p>
+        <p class="data-help">내보내기로 백업하고, 정리된 JSON을 붙여넣거나 파일로 가져옵니다. 이미 저장된 건수만큼만 건너뛰므로, 같은 파일을 다시 가져와도 중복이 쌓이지 않고 명세서에 2건이면 2건 그대로 들어갑니다.</p>
         <button class="submit-btn" id="exportBtn">전체 내보내기 (JSON 백업)</button>
         <div class="form-group">
           <label for="importText">JSON 붙여넣기</label>
