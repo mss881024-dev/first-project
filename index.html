@@ -18,17 +18,25 @@
     <button class="data-btn" id="dataBtn" aria-label="데이터 관리">&#9881;</button>
   </header>
 
+  <section class="overview">
+    <span class="ov-label">이번 달 남은 금액</span>
+    <span class="ov-left-amt" id="ovLeft">₩0</span>
+    <span class="ov-daily" id="ovDaily"></span>
+    <div class="ov-bar"><div class="ov-bar-fill" id="ovBar"></div></div>
+    <div class="ov-rows">
+      <div class="ov-row"><span class="ov-row-label">수입 (월급 등)</span><span class="ov-amt income" id="ovIncome">+₩0</span></div>
+      <div class="ov-row"><span class="ov-row-label">카드 사용 <em>이번 달 쓴 것</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
+      <div class="ov-row"><span class="ov-row-label">통장 지출 <em>카드 외</em></span><span class="ov-amt expense" id="ovBank">-₩0</span></div>
+      <div class="ov-row" id="ovOtherRow" style="display:none"><span class="ov-row-label">그 외 유출 <em>대차·투자·이체</em></span><span class="ov-amt expense" id="ovOther">-₩0</span></div>
+    </div>
+    <span class="ov-delta" id="ovDelta"></span>
+  </section>
+
   <div class="account-tabs" id="accountTabs">
     <button class="tab-btn active" data-account="gongeum">공금통장</button>
     <button class="tab-btn" data-account="car">자동차마통</button>
     <button class="tab-btn" data-account="card">카드</button>
   </div>
-
-  <section class="spend-hero">
-    <span class="spend-label">이번달 지출</span>
-    <span class="spend-value" id="sumSpending">₩0</span>
-    <span class="spend-delta" id="spendDelta"></span>
-  </section>
 
   <section class="cash-flow" id="cashFlow">
     <div class="cf-row"><span class="cf-label">이월 (전월말 잔액)</span><span class="cf-amt" id="cfCarry">₩0</span></div>
@@ -49,7 +57,7 @@
   </section>
 
   <section class="category-section" id="categorySection" style="display:none">
-    <h2 class="section-title">카테고리별 지출</h2>
+    <h2 class="section-title">카테고리별 지출 <span class="section-total" id="categoryTotal">₩0</span></h2>
     <div class="category-list" id="categoryList"></div>
   </section>
 

@@ -13,6 +13,10 @@ const CATEGORIES = [
   '대출·이자', '투자', '대차(빌림·빌려줌)', '카드대금', '기타',
 ];
 const TRANSFER_CATEGORY = '계좌이동';
+const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
+const CARD_ACCOUNT  = 'card';
+// 소비는 아니지만 돈이 나간 항목 — '남은 금액'에서는 빼고, '쓴 돈'에는 안 넣는다.
+const NON_SPENDING_OUTFLOW = ['대차(빌림·빌려줌)', '투자'];
 // 지출(소비) 집계에서 빼는 카테고리. 잔액에는 그대로 반영된다.
 //  - 카드대금: 카드 탭의 상세 N건과 이중 계상되므로 제외
 //  - 대차·투자: 돈은 나가지만 소비가 아니므로 제외 ('이번달 얼마 썼나'를 정확히 보려고)
@@ -74,7 +78,15 @@ function txnKey(t) { return [t.date, t.type, t.dir, t.amount, t.category, t.note
 const el = id => document.getElementById(id);
 const elMonthLabel   = el('monthLabel');
 const elTabs         = el('accountTabs');
-const elSumSpending  = el('sumSpending');
+const elOvLeft       = el('ovLeft');
+const elOvIncome     = el('ovIncome');
+const elOvCard       = el('ovCard');
+const elOvBank       = el('ovBank');
+const elOvOther      = el('ovOther');
+const elOvOtherRow   = el('ovOtherRow');
+const elOvBar        = el('ovBar');
+const elOvDaily      = el('ovDaily');
+const elOvDelta      = el('ovDelta');
 const elCashFlow     = el('cashFlow');
 const elCardFlow     = el('cardFlow');
 const elCfCarry      = el('cfCarry');
@@ -83,7 +95,6 @@ const elCfOut        = el('cfOut');
 const elCfLeft       = el('cfLeft');
 const elCardUse      = el('cardUse');
 const elCardPrev     = el('cardPrev');
-const elSpendDelta   = el('spendDelta');
 const elCatSection   = el('categorySection');
 const elCatList      = el('categoryList');
 const elTxnList      = el('transactionList');
@@ -113,19 +124,64 @@ function getMonthlyTxns(account, mKey) {
 }
 
 function renderSummary(txns) {
-  const spending = txns.filter(isSpending).reduce((s,t) => s + t.amount, 0);
-  elSumSpending.textContent = fmtWon(spending);
-
   if (currentAccount === 'card') { renderCardFlow(txns); }
   else { renderCashFlow(txns); }
 
-  const prev = getMonthlyTxns(currentAccount, prevMonthKey()).filter(isSpending).reduce((s,t) => s + t.amount, 0);
-  if (prev === 0 && spending === 0) { elSpendDelta.textContent = ''; return; }
-  if (prev === 0) { elSpendDelta.textContent = '전월 기록 없음'; elSpendDelta.className = 'spend-delta'; return; }
-  const diff = spending - prev;
-  const pct  = Math.round(Math.abs(diff) / prev * 100);
-  elSpendDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + fmtWon(diff) + ' (' + pct + '%)';
-  elSpendDelta.className = 'spend-delta' + (diff > 0 ? ' up' : diff < 0 ? ' down' : '');
+}
+
+// 이번 달 전체(계좌 구분 없음): 수입을 총액으로 놓고 카드값·지출을 깎아 남은 금액을 낸다.
+// 카드 사용액은 통장에서 다음 달에 빠지더라도 '이번 달에 쓴 돈'으로 보고 지금 차감한다.
+// 그래서 통장의 '카드대금' 출금은 여기서 세지 않는다(이중 계상 방지).
+function monthTotals(mKey) {
+  let income = 0, bankSpend = 0, other = 0;
+  BANK_ACCOUNTS.forEach(a => {
+    getMonthlyTxns(a, mKey).forEach(t => {
+      if (t.type === 'income') { income += t.amount; return; }
+      if (t.type === 'transfer') { other += (t.dir === 'out' ? t.amount : -t.amount); return; }
+      if (t.category === '카드대금') return;
+      if (NON_SPENDING_OUTFLOW.indexOf(t.category) !== -1) { other += t.amount; return; }
+      bankSpend += t.amount;
+    });
+  });
+  const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
+    .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const spent = bankSpend + cardUse;
+  return { income, bankSpend, cardUse, other, spent, left: income - spent - other };
+}
+
+function renderOverview() {
+  const mKey = monthKey(currentYear, currentMonth);
+  const t = monthTotals(mKey);
+
+  elOvLeft.textContent = (t.left < 0 ? '-' : '') + fmtWon(t.left);
+  elOvLeft.className   = 'ov-left-amt' + (t.left < 0 ? ' negative' : '');
+  elOvIncome.textContent = '+' + fmtWon(t.income);
+  elOvCard.textContent   = '-' + fmtWon(t.cardUse);
+  elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
+  elOvOtherRow.style.display = t.other === 0 ? 'none' : '';
+  elOvOther.textContent  = (t.other < 0 ? '+' : '-') + fmtWon(t.other);
+
+  const used = t.spent + Math.max(t.other, 0);
+  const pct  = t.income > 0 ? Math.min(100, Math.round(used / t.income * 100)) : 0;
+  elOvBar.style.width = pct + '%';
+  elOvBar.className   = 'ov-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
+
+  // 이번 달을 보고 있을 때만 '남은 일수 / 하루 가용액'을 띄운다.
+  const now = new Date();
+  if (now.getFullYear() === currentYear && now.getMonth() + 1 === currentMonth) {
+    const daysLeft = lastDayOf(currentYear, currentMonth) - now.getDate() + 1;
+    elOvDaily.textContent = t.left > 0
+      ? '남은 ' + daysLeft + '일 · 하루 ' + fmtWon(Math.floor(t.left / daysLeft)) + ' 쓸 수 있음'
+      : '예산 초과';
+  } else {
+    elOvDaily.textContent = t.income > 0 ? '수입의 ' + pct + '% 사용' : '';
+  }
+
+  const prev = monthTotals(prevMonthKey());
+  if (prev.spent === 0) { elOvDelta.textContent = ''; return; }
+  const diff = t.spent - prev.spent;
+  elOvDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + fmtWon(diff);
+  elOvDelta.className = 'ov-delta' + (diff > 0 ? ' up' : ' down');
 }
 
 // 통장 탭: 이월 → 당월 입금 → 당월 출금(카드대금·이체·대차 전부) → 당월말 남은 잔액
@@ -165,6 +221,7 @@ function renderCategories(txns) {
   spending.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
   const rows = Object.keys(byCat).map(c => ({ cat: c, amt: byCat[c] })).sort((a,b) => b.amt - a.amt);
 
+  el('categoryTotal').textContent = fmtWon(total);
   elCatList.innerHTML = rows.map(r => {
     const pct = Math.round(r.amt / total * 100);
     return '<div class="cat-row">' +
@@ -199,7 +256,7 @@ function renderList(txns) {
 function render() {
   elMonthLabel.textContent = currentYear + '년 ' + currentMonth + '월';
   const txns = getMonthlyTxns();
-  renderSummary(txns); renderCategories(txns); renderList(txns);
+  renderOverview(); renderSummary(txns); renderCategories(txns); renderList(txns);
 }
 
 function setAccount(account) {
