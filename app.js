@@ -23,6 +23,9 @@ const SETTINGS_KEY = 'fintrack_settings';
 const DEFAULT_SALARY = 0;
 const DEBT_CATEGORY = '대차(빌림·빌려줌)';
 const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
+// '이번 달 남은 금액'은 생활비 계좌 기준으로 낸다. 차마통은 차·대출·목돈이 오가는
+// 계좌라 같이 더하면 생활비가 얼마 남았는지 안 보인다(차마통 탭에서 따로 본다).
+const BUDGET_ACCOUNT = 'gongeum';
 const CARD_ACCOUNT  = 'card';
 // 현금 흐름 기준이다. 나간 돈은 소비든 대차든 자산이든 전부 '나간 돈'으로 센다.
 // 집계에서 빼는 것은 '같은 돈을 두 번 세게 되는 것'뿐이다.
@@ -195,7 +198,7 @@ function monthTotals(mKey) {
   let otherIncome = 0, bankSpend = 0, moved = 0, cardPaid = 0;
   const income = salaryFor(mKey);   // 월급은 급여 계좌로 들어오므로 설정값으로 대리한다
   const topup  = topupFor();        // 차마통에서 끌어와 생활비에 보태는 고정액
-  BANK_ACCOUNTS.forEach(a => {
+  [BUDGET_ACCOUNT].forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
       // 내 계좌끼리 옮긴 돈은 흐름이 두 번 찍히지만 실제로는 늘지도 줄지도 않는다.
       if (t.type === 'transfer') { moved += t.amount; return; }
