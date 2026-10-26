@@ -106,7 +106,8 @@ function normalize(t) {
     id: t.id || uid(),
     type,
     date: t.date,
-    amount: Math.abs(Number(t.amount) || 0),
+    // 카드 할인·환불은 음수로 들어온다. abs를 씌우면 할인이 지출로 더해진다.
+    amount: Number(t.amount) || 0,
     category: t.category || (type === 'transfer' ? TRANSFER_CATEGORY : type === 'income' ? '기타수입' : '기타'),
     dir: type === 'transfer' ? (t.dir === 'in' ? 'in' : 'out') : null,
     // 카드는 '언제 긁었나'(date)와 '언제 빠지나'(bm, 청구월)가 다르다. 집계는 bm 기준.
@@ -462,7 +463,8 @@ function renderList(txns) {
   sorted.forEach(t => {
     const item = document.createElement('div');
     item.className = 'txn-item'; item.dataset.id = t.id;
-    const sign = t.type === 'income' || (t.type === 'transfer' && t.dir === 'in') ? '+' : '-';
+    const inflow = t.type === 'income' || (t.type === 'transfer' && t.dir === 'in');
+    const sign = (inflow !== (t.amount < 0)) ? '+' : '-';
     item.innerHTML =
       '<span class="txn-date">' + escHtml(fmtDate(t.date)) + '</span>' +
       '<div class="txn-body">' +
