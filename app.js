@@ -28,6 +28,10 @@ const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
 // 계좌라 같이 더하면 생활비가 얼마 남았는지 안 보인다(차마통 탭에서 따로 본다).
 const BUDGET_ACCOUNT = 'gongeum';
 
+// 가계(월급 기준 정리)는 이 달부터 시작한다. 그 이전 달은 마통 추적 기록만 남아 있고
+// 카드 명세서가 갖춰져 있지 않아, 가계 숫자로 보여주면 틀린 값이 된다.
+const HOUSEHOLD_START_MONTH = '2026-11';
+
 // 가계 탭(월급 기준)에 넣는 지출 카테고리. 마통 운용·대출·지인 대차는 들어가지 않는다.
 // 범위는 화면에 그대로 적어 보여준다.
 // 카드 명세서에는 찍혔지만 월급에서 나가지 않는 것. 기록은 남기되 가계 집계에서만 뺀다.
@@ -156,6 +160,7 @@ const elOvDelta      = el('ovDelta');
 const elOvWarn       = el('ovWarn');
 const elOverview     = el('overview');
 const elHouseNote    = el('houseNote');
+const elHouseStart   = el('houseStart');
 const elOvElseRow    = el('ovElseRow');
 const elOvElse       = el('ovElse');
 const elOvSalaryEdit = el('ovSalaryEdit');
@@ -318,6 +323,20 @@ function householdTotals(mKey) {
 
 function renderHousehold() {
   const mKey = monthKey(currentYear, currentMonth);
+
+  // 시작월 이전은 숫자를 내지 않는다. 반쪽 데이터로 낸 숫자가 더 나쁘다.
+  if (mKey < HOUSEHOLD_START_MONTH) {
+    elOverview.style.display = 'none';
+    elCatSection.style.display = 'none';
+    elHouseStart.style.display = '';
+    elHouseStart.innerHTML = '<b>' + HOUSEHOLD_START_MONTH.replace('-','년 ') + '월부터 정리합니다</b>' +
+      currentYear + '년 ' + currentMonth + '월은 가계 집계 범위 밖입니다. ' +
+      '이 달의 자금 흐름은 공금마통·차마통 탭에서 볼 수 있습니다.';
+    return;
+  }
+  elOverview.style.display = '';
+  elHouseStart.style.display = 'none';
+
   const h = householdTotals(mKey);
 
   elOvLeft.textContent = (h.left < 0 ? '-' : '') + fmtWon(h.left);
@@ -519,6 +538,7 @@ function setAccount(account) {
   const isDebt = account === 'debt', isHouse = account === 'house';
   elOverview.style.display  = isHouse ? '' : 'none';
   elHouseNote.style.display = isHouse ? '' : 'none';
+  elHouseStart.style.display = 'none';
   elDebtPanel.style.display = isDebt ? '' : 'none';
   elCashFlow.style.display  = 'none';
   elCardFlow.style.display  = 'none';
@@ -713,5 +733,10 @@ document.addEventListener('keydown', e => {
   closeModal(); elDataOverlay.classList.add('hidden');
 });
 
+// 가계가 기본 탭이므로, 아직 시작월 전이면 시작월을 바로 띄운다.
+if (monthKey(currentYear, currentMonth) < HOUSEHOLD_START_MONTH) {
+  currentYear  = parseInt(HOUSEHOLD_START_MONTH.slice(0,4), 10);
+  currentMonth = parseInt(HOUSEHOLD_START_MONTH.slice(5,7), 10);
+}
 renderCategoryOptions('expense');
 setAccount('house');
