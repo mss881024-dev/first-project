@@ -447,6 +447,15 @@ body.account-house .tab-btn.active { color: var(--accent); border-bottom-color: 
 .ov-back b { color: var(--text); font-weight: 800; }
 
 /* 돌려받는 항목 표시 */
+/* 대차 탭 — 현금으로 받은 걸 기록하는 버튼 */
+.debt-cash {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; padding: 2px 7px; margin-left: 6px;
+  font-size: 0.64rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.debt-cash:hover { color: var(--text); border-color: var(--accent); }
+.debt-cash.undo { opacity: 0.75; }
+
 .hs-back {
   font-style: normal; font-size: 0.6rem; font-weight: 800;
   background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;

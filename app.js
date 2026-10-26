@@ -75,9 +75,12 @@ function loadSettings() {
       overrides: raw.overrides || {}, // 월별 월급 덮어쓰기
       income: raw.income || [],       // 월급·마통 외에 매달 들어오는 돈 (예: 자사주 보전)
       extraIn: raw.extraIn || {},     // 그 달에만 들어온 돈 — {"2026-11":[{name,amount}]}
+      // 현금으로 돌려받은 기록. 현금은 통장에 안 찍히므로 거래내역에 넣으면 잔액이 틀어진다.
+      // 받을 돈에서 차감하는 용도로만 쓴다 — [{name,date,amount}]
+      settlements: raw.settlements || [],
     };
   } catch {
-    return { salary: DEFAULT_SALARY, topup: 0, income: [], fixed: [], etc: [], separate: [], overrides: {}, extraIn: {} };
+    return { salary: DEFAULT_SALARY, topup: 0, income: [], fixed: [], etc: [], separate: [], overrides: {}, extraIn: {}, settlements: [] };
   }
 }
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
@@ -136,6 +139,7 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function monthKey(y, m) { return y + '-' + String(m).padStart(2,'0'); }
 function prevMonthKey() { return currentMonth === 1 ? monthKey(currentYear-1, 12) : monthKey(currentYear, currentMonth-1); }
 function lastDayOf(y, m) { return new Date(y, m, 0).getDate(); }
+function todayStr() { return new Date().toISOString().slice(0,10); }
 function monthEnd(y, m) { return monthKey(y, m) + '-' + String(lastDayOf(y, m)).padStart(2,'0'); }
 function isInflow(t)  { return t.type === 'income'  || (t.type === 'transfer' && t.dir === 'in');  }
 function isOutflow(t) { return t.type === 'expense' || (t.type === 'transfer' && t.dir === 'out'); }
@@ -550,6 +554,7 @@ function debtByPeer() {
   // 가계에서 먼저 낸 돈을 받을 돈으로 더하고, 그 이름으로 들어온 입금을 뺀다.
   // 현금으로 돌려받으면 통장에 안 찍히므로, 받은 날 입금으로 기록해야 차감된다.
   const house = householdReceivables();
+  const cfgSettle = loadSettings().settlements;
   Object.keys(house).forEach(name => {
     net[name] = (net[name] || 0) + house[name].given;
     fromHouse[name] = house[name];
@@ -562,8 +567,15 @@ function debtByPeer() {
         (log[name] = log[name] || []).push(t);
       });
     });
+    // 현금으로 받은 기록 차감 (통장에 안 찍히는 돈)
+    let cashCount = 0, cashSum = 0;
+    cfgSettle.forEach(x => {
+      if (x.name !== name) return;
+      net[name] -= (x.amount || 0); cashCount++; cashSum += (x.amount || 0);
+    });
     log[name] = log[name] || [];
-    fromHouse[name].received = backCount;
+    fromHouse[name].received = backCount + cashCount;
+    fromHouse[name].cash = cashSum;
   });
   return Object.keys(net)
     .map(p => ({ peer: p, net: net[p], count: (log[p] || []).length,
@@ -572,7 +584,8 @@ function debtByPeer() {
 }
 
 function renderDebt() {
-  const rows = debtByPeer().filter(r => r.net !== 0 || r.count);
+  // 가계에서 먼저 낸 건은 정산돼도 남겨 둔다 — 안 그러면 '되돌리기'를 누를 데가 없다.
+  const rows = debtByPeer().filter(r => r.net !== 0 || r.count || r.house);
   if (rows.length === 0) { elDebtEmpty.style.display = ''; elDebtList.innerHTML = ''; return; }
   elDebtEmpty.style.display = 'none';
   const toGet = rows.filter(r => r.net > 0).reduce((s,r) => s + r.net, 0);
@@ -583,7 +596,9 @@ function renderDebt() {
     rows.map(r =>
       '<div class="debt-row"><span class="debt-peer">' + escHtml(r.peer) +
       '<em>' + (r.house
-        ? '가계 ' + r.house.months + '개월 먼저 냄' + (r.house.received ? ' · 받음 ' + r.house.received + '건' : '')
+        ? '가계 ' + r.house.months + '개월 먼저 냄' + (r.house.received ? ' · 받음 ' + r.house.received + '건' : '') +
+          '<button class="debt-cash" data-cash="' + escHtml(r.peer) + '">현금 받음</button>' +
+          (r.house.cash ? '<button class="debt-cash undo" data-uncash="' + escHtml(r.peer) + '">되돌리기</button>' : '')
         : r.count + '건') + '</em></span>' +
       '<span class="debt-amt ' + (r.net > 0 ? 'income' : r.net < 0 ? 'expense' : 'muted') + '">' +
         (r.net > 0 ? '받을 ' : r.net < 0 ? '줄 ' : '정산됨 ') + fmtWon(r.net) +
@@ -769,6 +784,39 @@ elHsIn.addEventListener('click', e => {
   saveSettings(s); render();
 });
 
+// 현금으로 돌려받은 걸 기록한다. 통장 거래로 넣으면 실제로 들어오지 않은 돈이
+// 잔액에 더해지므로, 받을 돈에서 빼는 기록으로만 남긴다.
+elDebtList.addEventListener('click', e => {
+  const add = e.target.closest('[data-cash]');
+  const undo = e.target.closest('[data-uncash]');
+  if (!add && !undo) return;
+  const s = loadSettings();
+
+  if (undo) {
+    const name = undo.getAttribute('data-uncash');
+    for (let i = s.settlements.length - 1; i >= 0; i--) {
+      if (s.settlements[i].name === name) {
+        const x = s.settlements[i];
+        if (!confirm(name + ' · ' + x.date + ' ' + fmtWon(x.amount) + ' 기록을 지울까요?')) return;
+        s.settlements.splice(i, 1); saveSettings(s); render();
+        return;
+      }
+    }
+    return;
+  }
+
+  const name = add.getAttribute('data-cash');
+  const row = debtByPeer().filter(r => r.peer === name)[0];
+  const outstanding = row && row.net > 0 ? row.net : 0;
+  const input = prompt(name + '에게 현금으로 받은 금액을 넣으세요.\n(통장에는 안 찍히므로 여기에만 기록됩니다)', outstanding || '');
+  if (input === null) return;
+  const n = parseInt(String(input).replace(/[^0-9]/g, ''), 10);
+  if (!n) return;
+  s.settlements.push({ name: name, date: todayStr(), amount: n });
+  saveSettings(s); render();
+  showSnackbar(name + ' 현금 ' + fmtWon(n) + ' 받음으로 기록했습니다', false);
+});
+
 /* ---------- 데이터 관리 (내보내기 / 가져오기 / 초기화) ---------- */
 
 el('dataBtn').addEventListener('click', () => { elImportText.value = ''; elDataOverlay.classList.remove('hidden'); });
@@ -793,7 +841,7 @@ function parseImport(text) {
   if (data && data.settings) {
     const cur = loadSettings(), inc = data.settings;
     ['salary','topup'].forEach(k => { if (typeof inc[k] === 'number') cur[k] = inc[k]; });
-    ['income','fixed','etc','separate'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
+    ['income','fixed','etc','separate','settlements'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
     if (inc.overrides && typeof inc.overrides === 'object') {
       Object.keys(inc.overrides).forEach(m => { cur.overrides[m] = inc.overrides[m]; });
     }
