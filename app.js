@@ -64,10 +64,15 @@ function loadSettings() {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
     return {
       salary: raw.salary || DEFAULT_SALARY,
-
-      overrides: raw.overrides || {},
+      topup: raw.topup || 0,          // 마통에서 끌어와 생활비에 보태는 돈
+      fixed: raw.fixed || [],         // 매달 고정 지출 (인터넷·모바일·보험 등)
+      etc: raw.etc || [],             // 기타 (밥값·용돈 등)
+      separate: raw.separate || [],   // 별도 결제 건 — 참고만, 총계에 넣지 않음
+      overrides: raw.overrides || {}, // 월별 월급 덮어쓰기
     };
-  } catch { return { salary: DEFAULT_SALARY, topup: 0, overrides: {} }; }
+  } catch {
+    return { salary: DEFAULT_SALARY, topup: 0, fixed: [], etc: [], separate: [], overrides: {} };
+  }
 }
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 // 월급은 거래내역에서 뽑지 않는다 — 급여 계좌가 따로 있어서 이 계좌들에는 안 들어온다.
@@ -147,13 +152,6 @@ const el = id => document.getElementById(id);
 const elMonthLabel   = el('monthLabel');
 const elTabs         = el('accountTabs');
 const elOvLeft       = el('ovLeft');
-const elOvIncome     = el('ovIncome');
-const elOvCard       = el('ovCard');
-const elOvBank       = el('ovBank');
-const elOvOther      = el('ovOther');
-const elOvOtherRow   = el('ovOtherRow');
-const elOvOtherIn    = el('ovOtherIn');
-const elOvInRow      = el('ovInRow');
 const elOvBar        = el('ovBar');
 const elOvDaily      = el('ovDaily');
 const elOvDelta      = el('ovDelta');
@@ -161,11 +159,13 @@ const elOvWarn       = el('ovWarn');
 const elOverview     = el('overview');
 const elHouseNote    = el('houseNote');
 const elHouseStart   = el('houseStart');
-const elOvElseRow    = el('ovElseRow');
-const elOvElse       = el('ovElse');
-const elOvSalaryEdit = el('ovSalaryEdit');
-const elOvTopupRow   = el('ovTopupRow');
-const elOvTopup      = el('ovTopup');
+const elHsIn         = el('hsIn');
+const elHsFixed      = el('hsFixed');
+const elHsCard       = el('hsCard');
+const elHsEtc        = el('hsEtc');
+const elHsSep        = el('hsSep');
+const elHsSepBox     = el('hsSepBox');
+const elHsFormula    = el('hsFormula');
 const elDebtPanel    = el('debtPanel');
 const elDebtList     = el('debtList');
 const elDebtEmpty    = el('debtEmpty');
@@ -218,87 +218,15 @@ function renderSummary(txns) {
 
 }
 
-// 이번 달 전체(계좌 구분 없음): 수입을 총액으로 놓고 카드값·지출을 깎아 남은 금액을 낸다.
-// 카드 사용액은 통장에서 다음 달에 빠지더라도 '이번 달에 쓴 돈'으로 보고 지금 차감한다.
-// 그래서 통장의 '카드대금' 출금은 여기서 세지 않는다(이중 계상 방지).
-function monthTotals(mKey) {
-  let otherIncome = 0, bankSpend = 0, moved = 0, cardPaid = 0;
-  const income = salaryFor(mKey);   // 월급은 급여 계좌로 들어오므로 설정값으로 대리한다
-  const topup  = topupFor(mKey);    // 차마통에서 실제로 옮겨온 돈 (그 달치)
-  [BUDGET_ACCOUNT].forEach(a => {
-    getMonthlyTxns(a, mKey).forEach(t => {
-      // 내 계좌끼리 옮긴 돈은 흐름이 두 번 찍히지만 실제로는 늘지도 줄지도 않는다.
-      if (t.type === 'transfer') { moved += t.amount; return; }
-      // 월급 외에 밖에서 들어온 돈(매각대금·보험만기·받은 돈 등)은 흐름이므로 더한다.
-      if (t.type === 'income') { otherIncome += t.amount; return; }
-      // 통장에서 빠진 카드대금은 카드 명세서 상세로 대체한다(이중 계상 방지).
-      if (t.category === '카드대금') { cardPaid += t.amount; return; }
-      bankSpend += t.amount;
-    });
-  });
-  const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
-    .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
-  const spent = bankSpend + cardUse;
-  return { income, topup, otherIncome, bankSpend, cardUse, cardPaid, moved, spent,
-           left: income + topup + otherIncome - spent };
-}
-
-function renderOverview() {
-  const mKey = monthKey(currentYear, currentMonth);
-  const t = monthTotals(mKey);
-
-  elOvLeft.textContent = (t.left < 0 ? '-' : '') + fmtWon(t.left);
-  elOvLeft.className   = 'ov-left-amt' + (t.left < 0 ? ' negative' : '');
-  elOvIncome.textContent = '+' + fmtWon(t.income);
-  elOvSalaryEdit.dataset.month = mKey;
-  elOvTopupRow.style.display = t.topup === 0 ? 'none' : '';
-  elOvTopup.textContent = (t.topup < 0 ? '-' : '+') + fmtWon(t.topup);
-  elOvTopup.className = 'ov-amt ' + (t.topup < 0 ? 'expense' : 'income');
-  elOvCard.textContent   = '-' + fmtWon(t.cardUse);
-  elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
-  elOvInRow.style.display = t.otherIncome === 0 ? 'none' : '';
-  elOvOtherIn.textContent = '+' + fmtWon(t.otherIncome);
-  elOvOtherRow.style.display = t.moved === 0 ? 'none' : '';
-  elOvOther.textContent  = fmtWon(t.moved);
-
-  const pool = t.income + t.topup + t.otherIncome;
-  const pct  = pool > 0 ? Math.min(100, Math.round(t.spent / pool * 100)) : 0;
-  elOvBar.style.width = pct + '%';
-  elOvBar.className   = 'ov-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
-
-  // 이번 달을 보고 있을 때만 '남은 일수 / 하루 가용액'을 띄운다.
-  const now = new Date();
-  if (now.getFullYear() === currentYear && now.getMonth() + 1 === currentMonth) {
-    const daysLeft = lastDayOf(currentYear, currentMonth) - now.getDate() + 1;
-    elOvDaily.textContent = t.left > 0
-      ? '남은 ' + daysLeft + '일 · 하루 ' + fmtWon(Math.floor(t.left / daysLeft)) + ' 쓸 수 있음'
-      : '예산 초과';
-  } else {
-    elOvDaily.textContent = pool > 0 ? '들어온 돈의 ' + pct + '% 사용' : '';
-  }
-
-  // 통장에서 빠진 카드대금과 명세서 청구합계가 맞는지 대사한다.
-  // 안 맞으면 명세서가 덜 들어왔거나 청구월이 잘못 잡힌 것이다.
-  if (t.cardPaid === 0 && t.cardUse === 0) { elOvWarn.style.display = 'none'; }
-  else if (t.cardPaid === 0) { elOvWarn.style.display = ''; elOvWarn.textContent = '통장에 카드대금 출금이 없음 — 통장 내역 확인'; }
-  else if (t.cardUse === 0) { elOvWarn.style.display = ''; elOvWarn.textContent = '카드 명세서 미적재 — 통장 카드대금 ' + fmtWon(t.cardPaid) + '만 있음'; }
-  else if (t.cardPaid !== t.cardUse) {
-    elOvWarn.style.display = '';
-    elOvWarn.textContent = '불일치: 통장 카드대금 ' + fmtWon(t.cardPaid) + ' vs 명세서 ' + fmtWon(t.cardUse)
-      + ' (차이 ' + fmtWon(t.cardPaid - t.cardUse) + ')';
-  } else { elOvWarn.style.display = 'none'; }
-
-  const prev = monthTotals(prevMonthKey());
-  if (prev.spent === 0) { elOvDelta.textContent = ''; return; }
-  const diff = t.spent - prev.spent;
-  elOvDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + fmtWon(diff);
-  elOvDelta.className = 'ov-delta' + (diff > 0 ? ' up' : ' down');
-}
-
 // 가계: 월급에서 가계 소비(카드값 + 생활비성 통장 지출)를 빼 남은 돈을 낸다.
 // 마통 운용(사업자대출·차 구매·지인 대차·대출이자)과 계좌 간 이동은 범위 밖이다.
 function householdTotals(mKey) {
+  const cfg = loadSettings();
   const salary = salaryFor(mKey);
+  const topup  = cfg.topup;
+  const fixed = cfg.fixed, etc = cfg.etc, separate = cfg.separate;
+  const fixedTotal = fixed.reduce((s,i) => s + (i.amount||0), 0);
+  const etcTotal   = etc.reduce((s,i) => s + (i.amount||0), 0);
   const cardRows = getMonthlyTxns(CARD_ACCOUNT, mKey).filter(t => t.type === 'expense');
   const isMine = t => NON_HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1;
   const cardUse  = cardRows.filter(isMine).reduce((s,t) => s + t.amount, 0);
@@ -317,8 +245,16 @@ function householdTotals(mKey) {
     byCat[c] = (byCat[c] || 0) + t.amount;
   });
 
-  const spent = cardUse + bankSpend;
-  return { salary, cardUse, cardElse, bankSpend, spent, byCat, left: salary - spent };
+  const byIssuer = {};
+  cardRows.filter(isMine).forEach(t => {
+    const k = t.issuer || '카드';
+    byIssuer[k] = (byIssuer[k] || 0) + t.amount;
+  });
+
+  const inflow = salary + topup;
+  const spent  = fixedTotal + cardUse + etcTotal;
+  return { salary, topup, inflow, fixed, fixedTotal, etc, etcTotal, separate,
+           cardUse, cardElse, byIssuer, bankSpend, byCat, spent, left: inflow - spent };
 }
 
 function renderHousehold() {
@@ -341,14 +277,45 @@ function renderHousehold() {
 
   elOvLeft.textContent = (h.left < 0 ? '-' : '') + fmtWon(h.left);
   elOvLeft.className   = 'ov-left-amt' + (h.left < 0 ? ' negative' : '');
-  elOvIncome.textContent = '+' + fmtWon(h.salary);
-  elOvCard.textContent   = '-' + fmtWon(h.cardUse);
-  elOvBank.textContent   = '-' + fmtWon(h.bankSpend);
-  elOvElseRow.style.display = h.cardElse === 0 ? 'none' : '';
-  elOvElse.textContent   = fmtWon(h.cardElse);
-  elOvSalaryEdit.dataset.month = mKey;
 
-  const pct = h.salary > 0 ? Math.min(100, Math.round(h.spent / h.salary * 100)) : 0;
+  const won = n => fmtWon(n);
+  const line = (name, amt, cls) =>
+    '<div class="hs-row"><span class="hs-name">' + (name.indexOf('<button') >= 0 ? name : escHtml(name)) + '</span>' +
+    '<span class="hs-amt' + (cls ? ' ' + cls : '') + '">' + amt + '</span></div>';
+  const sub = (amt, cls) =>
+    '<div class="hs-sub"><span>소계</span><span class="' + (cls||'') + '">' + amt + '</span></div>';
+
+  elHsIn.innerHTML =
+    line('월급 <button class="hs-edit" data-edit="salary">수정</button>', '+' + won(h.salary), 'income') +
+    (h.topup ? line('마통에서', '+' + won(h.topup), 'income') : '') +
+    sub('+' + won(h.inflow), 'income');
+
+  elHsFixed.innerHTML = h.fixed.length
+    ? h.fixed.map(i => line(i.name, '-' + won(i.amount||0), 'expense')).join('') +
+      sub('-' + won(h.fixedTotal), 'expense')
+    : '<div class="hs-empty">등록된 고정 지출이 없습니다</div>';
+
+  const issuers = Object.keys(h.byIssuer).sort((a,b) => h.byIssuer[b] - h.byIssuer[a]);
+  elHsCard.innerHTML = (issuers.length
+      ? issuers.map(k => line(k + '카드', '-' + won(h.byIssuer[k]), 'expense')).join('')
+      : '<div class="hs-empty">이 달 카드 명세서가 없습니다</div>') +
+    (h.cardElse ? line('(제외) 타인 부담 · 차마통 결제', won(h.cardElse), 'muted') : '') +
+    sub('-' + won(h.cardUse), 'expense');
+
+  elHsEtc.innerHTML = h.etc.length
+    ? h.etc.map(i => line(i.name, '-' + won(i.amount||0), 'expense')).join('') +
+      sub('-' + won(h.etcTotal), 'expense')
+    : '<div class="hs-empty">등록된 기타 항목이 없습니다</div>';
+
+  // 별도 결제 건 — 참고만, 총계에 넣지 않는다
+  elHsSepBox.style.display = h.separate.length ? '' : 'none';
+  elHsSep.innerHTML = h.separate.map(i =>
+    line(i.name, i.amount ? won(i.amount) : (i.note || '완납'), 'muted')).join('');
+
+  elHsFormula.textContent =
+    won(h.inflow) + ' − ' + won(h.fixedTotal) + ' − ' + won(h.cardUse) + ' − ' + won(h.etcTotal);
+
+  const pct = h.inflow > 0 ? Math.min(100, Math.round(h.spent / h.inflow * 100)) : 0;
   elOvBar.style.width = pct + '%';
   elOvBar.className   = 'ov-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
 
@@ -356,47 +323,40 @@ function renderHousehold() {
   if (now.getFullYear() === currentYear && now.getMonth() + 1 === currentMonth) {
     const daysLeft = lastDayOf(currentYear, currentMonth) - now.getDate() + 1;
     elOvDaily.textContent = h.left > 0
-      ? '남은 ' + daysLeft + '일 · 하루 ' + fmtWon(Math.floor(h.left / daysLeft)) + ' 쓸 수 있음'
-      : '월급 초과';
+      ? '남은 ' + daysLeft + '일 · 하루 ' + won(Math.floor(h.left / daysLeft)) + ' 쓸 수 있음'
+      : '예산 초과';
   } else {
-    elOvDaily.textContent = h.salary > 0 ? '월급의 ' + pct + '% 사용' : '';
+    elOvDaily.textContent = h.inflow > 0 ? '들어온 돈의 ' + pct + '% 사용' : '';
   }
 
-  // 카드 명세서가 안 들어온 달은 카드값이 0으로 나와 남은 돈이 부풀려진다. 그걸 알린다.
-  const cardPaid = getMonthlyTxns(BUDGET_ACCOUNT, mKey)
-    .filter(t => t.type === 'expense' && t.category === '카드대금')
-    .reduce((s,t) => s + t.amount, 0);
-  const stmtTotal = h.cardUse + h.cardElse;   // 명세서 전체(대사는 이 금액으로)
-  if (stmtTotal === 0 && cardPaid > 0) {
+  // 통장에서 따로 나간 생활비가 있으면 알린다 (고정지출·기타와 중복 입력 방지)
+  if (h.bankSpend > 0) {
     elOvWarn.style.display = '';
-    elOvWarn.textContent = '카드 명세서 미적재 — 통장에서 빠진 카드대금 ' + fmtWon(cardPaid) + '이 반영 안 됨';
-  } else if (cardPaid > 0 && stmtTotal !== cardPaid) {
-    elOvWarn.style.display = '';
-    elOvWarn.textContent = '불일치: 통장 카드대금 ' + fmtWon(cardPaid) + ' vs 명세서 ' + fmtWon(stmtTotal);
+    elOvWarn.textContent = '공금마통 내역에 생활비 ' + won(h.bankSpend) +
+      '이 따로 있습니다 — 위 고정지출·기타와 중복이 아닌지 확인하세요';
   } else { elOvWarn.style.display = 'none'; }
 
   const prev = householdTotals(prevMonthKey());
   if (prev.spent === 0) { elOvDelta.textContent = ''; }
   else {
     const diff = h.spent - prev.spent;
-    elOvDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + fmtWon(diff);
+    elOvDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + won(diff);
     elOvDelta.className = 'ov-delta' + (diff > 0 ? ' up' : ' down');
   }
 
-  // 카테고리별
-  const total = h.spent;
-  if (total === 0) { elCatSection.style.display = 'none'; return; }
+  const catTotal = Object.keys(h.byCat).reduce((s,k) => s + h.byCat[k], 0);
+  if (catTotal === 0) { elCatSection.style.display = 'none'; return; }
   elCatSection.style.display = '';
-  el('categoryTotal').textContent = fmtWon(total);
+  el('categoryTotal').textContent = won(catTotal);
   elCatList.innerHTML = Object.keys(h.byCat)
     .map(c => ({ cat: c, amt: h.byCat[c] }))
     .sort((a,b) => b.amt - a.amt)
     .map(r => {
-      const p = Math.round(r.amt / total * 100);
+      const pp = Math.round(r.amt / catTotal * 100);
       return '<div class="cat-row"><div class="cat-head">' +
         '<span class="cat-name">' + escHtml(r.cat) + '</span>' +
-        '<span class="cat-amt">' + fmtWon(r.amt) + '<span class="cat-pct">' + p + '%</span></span></div>' +
-        '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + p + '%"></div></div></div>';
+        '<span class="cat-amt">' + won(r.amt) + '<span class="cat-pct">' + pp + '%</span></span></div>' +
+        '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + pp + '%"></div></div></div>';
     }).join('');
 }
 
@@ -579,6 +539,7 @@ function closeModal() { elModalOverlay.classList.add('hidden'); }
 el('fabBtn').addEventListener('click', openModal);
 el('modalClose').addEventListener('click', closeModal);
 elModalOverlay.addEventListener('click', e => { if (e.target === elModalOverlay) closeModal(); });
+
 elSegments.addEventListener('click', e => {
   const btn = e.target.closest('.segment-btn'); if (btn) setSegment(btn.dataset.type);
 });
@@ -633,8 +594,9 @@ function showSnackbar(msg, undoable) {
   if (!undoable) setTimeout(() => elSnackbar.classList.add('hidden'), 2500);
 }
 
-elOvSalaryEdit.addEventListener('click', () => {
-  const mKey = elOvSalaryEdit.dataset.month;
+elHsIn.addEventListener('click', e => {
+  if (!e.target.closest('[data-edit="salary"]')) return;
+  const mKey = monthKey(currentYear, currentMonth);
   const cur = salaryFor(mKey);
   const input = prompt(mKey + ' 월급(수입 총액)을 입력하세요.\n비우면 기본값(' + fmtWon(loadSettings().salary) + ')으로 돌아갑니다.', cur);
   if (input === null) return;
@@ -656,7 +618,8 @@ el('dataClose').addEventListener('click', () => elDataOverlay.classList.add('hid
 elDataOverlay.addEventListener('click', e => { if (e.target === elDataOverlay) elDataOverlay.classList.add('hidden'); });
 
 el('exportBtn').addEventListener('click', () => {
-  const out = { version: 1, exportedAt: new Date().toISOString(), accounts: {} };
+  const out = { version: 1, exportedAt: new Date().toISOString(),
+                settings: loadSettings(), accounts: {} };
   Object.keys(ACCOUNTS).forEach(a => { out.accounts[a] = getTransactions(a); });
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -668,10 +631,22 @@ el('exportBtn').addEventListener('click', () => {
 // {version,accounts:{gongeum:[...]}} 또는 [{account,date,type,amount,category,note}] 둘 다 받는다.
 function parseImport(text) {
   const data = JSON.parse(text);
+  // 월급·고정지출·기타처럼 거래가 아닌 설정도 같은 파일로 받는다.
+  if (data && data.settings) {
+    const cur = loadSettings(), inc = data.settings;
+    ['salary','topup'].forEach(k => { if (typeof inc[k] === 'number') cur[k] = inc[k]; });
+    ['fixed','etc','separate'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
+    if (inc.overrides && typeof inc.overrides === 'object') {
+      Object.keys(inc.overrides).forEach(m => { cur.overrides[m] = inc.overrides[m]; });
+    }
+    saveSettings(cur);
+  }
   const buckets = {};
   Object.keys(ACCOUNTS).forEach(a => { buckets[a] = []; });
   if (Array.isArray(data)) {
     data.forEach(r => { const a = ACCOUNTS[r.account] ? r.account : currentAccount; buckets[a].push(r); });
+  } else if (data && data.accounts === undefined && data.settings) {
+    return buckets;   // 설정만 들어온 파일
   } else if (data && data.accounts) {
     Object.keys(data.accounts).forEach(a => {
       if (!ACCOUNTS[a]) throw new Error('알 수 없는 계좌: ' + a);

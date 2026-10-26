@@ -31,11 +31,15 @@
     <span class="ov-left-amt" id="ovLeft">₩0</span>
     <span class="ov-daily" id="ovDaily"></span>
     <div class="ov-bar"><div class="ov-bar-fill" id="ovBar"></div></div>
-    <div class="ov-rows">
-      <div class="ov-row"><span class="ov-row-label">월급 <em>고정</em> <button class="ov-edit" id="ovSalaryEdit" title="월급 수정">수정</button></span><span class="ov-amt income" id="ovIncome">+₩0</span></div>
-      <div class="ov-row"><span class="ov-row-label">카드값 <em>이 달 명세서</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
-      <div class="ov-row"><span class="ov-row-label">통장에서 쓴 생활비 <em>카드 외</em></span><span class="ov-amt expense" id="ovBank">-₩0</span></div>
-      <div class="ov-row muted" id="ovElseRow" style="display:none"><span class="ov-row-label">명세서에서 제외 <em>타인 부담 · 차마통 결제</em></span><span class="ov-amt" id="ovElse">₩0</span></div>
+    <div class="hs-sections">
+      <div class="hs-box"><h3 class="hs-title">들어온 돈</h3><div id="hsIn"></div></div>
+      <div class="hs-box"><h3 class="hs-title">고정 지출</h3><div id="hsFixed"></div></div>
+      <div class="hs-box"><h3 class="hs-title">카드값</h3><div id="hsCard"></div></div>
+      <div class="hs-box"><h3 class="hs-title">기타</h3><div id="hsEtc"></div></div>
+      <div class="hs-box" id="hsSepBox" style="display:none">
+        <h3 class="hs-title">별도 결제 건 <em>참고만 · 총계에 미포함</em></h3><div id="hsSep"></div>
+      </div>
+      <div class="hs-formula" id="hsFormula"></div>
     </div>
     <span class="ov-warn" id="ovWarn" style="display:none"></span>
     <span class="ov-delta" id="ovDelta"></span>
@@ -137,7 +141,7 @@
         <button class="modal-close" id="dataClose">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="data-help">내보내기로 백업하고, 정리된 JSON을 붙여넣거나 파일로 가져옵니다. 이미 저장된 건수만큼만 건너뛰므로, 같은 파일을 다시 가져와도 중복이 쌓이지 않고 명세서에 2건이면 2건 그대로 들어갑니다.</p>
+        <p class="data-help">내보내기로 백업하고, 정리된 JSON을 붙여넣거나 파일로 가져옵니다. 이미 저장된 건수만큼만 건너뛰므로, 같은 파일을 다시 가져와도 중복이 쌓이지 않고 명세서에 2건이면 2건 그대로 들어갑니다. 월급·고정지출·기타 설정도 같은 파일(<code>settings</code>)로 함께 들어옵니다.</p>
         <button class="submit-btn" id="exportBtn">전체 내보내기 (JSON 백업)</button>
         <div class="form-group">
           <label for="importText">JSON 붙여넣기</label>
