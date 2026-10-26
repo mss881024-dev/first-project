@@ -24,12 +24,11 @@ const DEFAULT_SALARY = 0;
 const DEBT_CATEGORY = '대차(빌림·빌려줌)';
 const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
 const CARD_ACCOUNT  = 'card';
-// 소비는 아니지만 돈이 나간 항목 — '남은 금액'에서는 빼고, '쓴 돈'에는 안 넣는다.
-const NON_SPENDING_OUTFLOW = ['대차(빌림·빌려줌)', '투자'];
-// 지출(소비) 집계에서 빼는 카테고리. 잔액에는 그대로 반영된다.
-//  - 카드대금: 카드 탭의 상세 N건과 이중 계상되므로 제외
-//  - 대차·투자: 돈은 나가지만 소비가 아니므로 제외 ('이번달 얼마 썼나'를 정확히 보려고)
-const EXCLUDED_FROM_SPENDING = ['카드대금', '대차(빌림·빌려줌)', '투자'];
+// 현금 흐름 기준이다. 나간 돈은 소비든 대차든 자산이든 전부 '나간 돈'으로 센다.
+// 집계에서 빼는 것은 '같은 돈을 두 번 세게 되는 것'뿐이다.
+//  - 카드대금: 통장에서 빠진 이 금액을 카드 명세서 상세가 대체한다 (둘 다 세면 이중)
+//  - 계좌이동(transfer): 내 계좌끼리 옮긴 돈은 전체로 보면 늘지도 줄지도 않는다
+const EXCLUDED_AS_DOUBLE_COUNT = ['카드대금'];
 
 let currentAccount = 'gongeum';
 let currentYear    = new Date().getFullYear();
@@ -108,7 +107,7 @@ function balanceAsOf(account, dateStr) {
   }
   return txns.reduce((s,t) => s + (isInflow(t) ? t.amount : -t.amount), 0);
 }
-function isSpending(t) { return t.type === 'expense' && EXCLUDED_FROM_SPENDING.indexOf(t.category) === -1; }
+function isSpending(t) { return t.type === 'expense' && EXCLUDED_AS_DOUBLE_COUNT.indexOf(t.category) === -1; }
 function txnKey(t) { return [t.date, t.bm, t.type, t.dir, t.amount, t.category, t.note].join('|'); }
 
 const el = id => document.getElementById(id);
@@ -183,23 +182,24 @@ function renderSummary(txns) {
 // 카드 사용액은 통장에서 다음 달에 빠지더라도 '이번 달에 쓴 돈'으로 보고 지금 차감한다.
 // 그래서 통장의 '카드대금' 출금은 여기서 세지 않는다(이중 계상 방지).
 function monthTotals(mKey) {
-  let otherIncome = 0, bankSpend = 0, other = 0, cardPaid = 0;
-  const income = salaryFor(mKey);
+  let otherIncome = 0, bankSpend = 0, moved = 0, cardPaid = 0;
+  const income = salaryFor(mKey);   // 월급은 급여 계좌로 들어오므로 설정값으로 대리한다
   BANK_ACCOUNTS.forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
-      // 거래내역의 입금은 급여 계좌에서 옮겨온 돈·대출·대차 회수가 대부분이라
-      // 월급 총액에 더하면 이중 계상이 된다. 전부 '그 외 유입(미포함)'으로 돌린다.
+      // 내 계좌끼리 옮긴 돈은 흐름이 두 번 찍히지만 실제로는 늘지도 줄지도 않는다.
+      if (t.type === 'transfer') { moved += t.amount; return; }
+      // 월급 외에 밖에서 들어온 돈(매각대금·보험만기·받은 돈 등)은 흐름이므로 더한다.
       if (t.type === 'income') { otherIncome += t.amount; return; }
-      if (t.type === 'transfer') { other += (t.dir === 'out' ? t.amount : -t.amount); return; }
+      // 통장에서 빠진 카드대금은 카드 명세서 상세로 대체한다(이중 계상 방지).
       if (t.category === '카드대금') { cardPaid += t.amount; return; }
-      if (NON_SPENDING_OUTFLOW.indexOf(t.category) !== -1) { other += t.amount; return; }
       bankSpend += t.amount;
     });
   });
   const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
     .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
   const spent = bankSpend + cardUse;
-  return { income, otherIncome, bankSpend, cardUse, cardPaid, other, spent, left: income - spent - other };
+  return { income, otherIncome, bankSpend, cardUse, cardPaid, moved, spent,
+           left: income + otherIncome - spent };
 }
 
 function renderOverview() {
@@ -212,13 +212,13 @@ function renderOverview() {
   elOvSalaryEdit.dataset.month = mKey;
   elOvCard.textContent   = '-' + fmtWon(t.cardUse);
   elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
-  elOvOtherRow.style.display = t.other === 0 ? 'none' : '';
-  elOvOther.textContent  = (t.other < 0 ? '+' : '-') + fmtWon(t.other);
   elOvInRow.style.display = t.otherIncome === 0 ? 'none' : '';
-  elOvOtherIn.textContent = fmtWon(t.otherIncome);
+  elOvOtherIn.textContent = '+' + fmtWon(t.otherIncome);
+  elOvOtherRow.style.display = t.moved === 0 ? 'none' : '';
+  elOvOther.textContent  = fmtWon(t.moved);
 
-  const used = t.spent + Math.max(t.other, 0);
-  const pct  = t.income > 0 ? Math.min(100, Math.round(used / t.income * 100)) : 0;
+  const pool = t.income + t.otherIncome;
+  const pct  = pool > 0 ? Math.min(100, Math.round(t.spent / pool * 100)) : 0;
   elOvBar.style.width = pct + '%';
   elOvBar.className   = 'ov-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
 
@@ -230,7 +230,7 @@ function renderOverview() {
       ? '남은 ' + daysLeft + '일 · 하루 ' + fmtWon(Math.floor(t.left / daysLeft)) + ' 쓸 수 있음'
       : '예산 초과';
   } else {
-    elOvDaily.textContent = t.income > 0 ? '수입의 ' + pct + '% 사용' : '';
+    elOvDaily.textContent = pool > 0 ? '들어온 돈의 ' + pct + '% 사용' : '';
   }
 
   // 통장에서 빠진 카드대금과 명세서 청구합계가 맞는지 대사한다.

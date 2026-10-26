@@ -12,6 +12,7 @@
 """
 
 import argparse
+import datetime
 import io
 import json
 import os
@@ -298,11 +299,59 @@ def convert(path, password=None):
 ACCOUNTS_LABEL = {'gongeum': '공금마통', 'car': '차마통', 'card': '카드'}
 
 
+def link_transfers(accounts, window_days=2):
+    """계좌끼리 옮긴 돈을 찾아 양쪽 모두 '계좌이동'으로 바꾼다.
+
+    흐름 기준에서 같은 돈을 두 번 세는 것이 유일한 문제인데, 통장 적요만 보면
+    한쪽은 '민상수'(이체)로 찍히고 다른 쪽은 '자동차매각'처럼 용도로 찍혀서
+    받는 쪽이 새로 들어온 돈으로 집계된다. 금액이 같고 방향이 반대인 짝을 찾아 묶는다.
+
+    조건: 금액 동일 · 계좌 다름 · 방향 반대 · 날짜 차이 window_days 이내 ·
+          (한쪽이 본인 이름 이체이거나, 두 적요가 같은 낱말을 공유)
+    """
+    def key_words(note):
+        drop = {'일반이체', '일반입금', '오픈뱅킹', '자동이체', '수수료납부', SELF_NAME, ''}
+        return {w for w in re.sub(r'[(),_]', ' ', note).split() if w not in drop and len(w) >= 2}
+
+    def out_like(r):  return r['type'] == 'expense' or (r['type'] == 'transfer' and r.get('dir') == 'out')
+    def in_like(r):   return r['type'] == 'income'  or (r['type'] == 'transfer' and r.get('dir') == 'in')
+    def days(a, b):
+        return abs((datetime.date.fromisoformat(a) - datetime.date.fromisoformat(b)).days)
+
+    flat = [(acct, r) for acct, rows in accounts.items() for r in rows]
+    used, linked = set(), []
+    for i, (acct_a, a) in enumerate(flat):
+        if id(a) in used or not out_like(a):
+            continue
+        for j, (acct_b, b) in enumerate(flat):
+            if i == j or id(b) in used or acct_a == acct_b or not in_like(b):
+                continue
+            if a['amount'] != b['amount'] or days(a['date'], b['date']) > window_days:
+                continue
+            # 본인 이름이 '그냥 적혀만 있는' 것으로는 부족하다. '민상수_현대차'처럼 용도가
+            # 붙어 있으면 다른 돈일 수 있다. 적요가 본인 이름 하나뿐일 때만 자기이체로 본다.
+            bare_self = SELF_NAME and (not key_words(a['note']) or not key_words(b['note']))
+            if not bare_self and not (key_words(a['note']) & key_words(b['note'])):
+                continue
+            for r, d in ((a, 'out'), (b, 'in')):
+                r['type'], r['category'], r['dir'] = 'transfer', '계좌이동', d
+                r.pop('peer', None)
+            used.add(id(a)); used.add(id(b))
+            linked.append((a['date'], a['amount'], acct_a, acct_b, a['note'], b['note']))
+            break
+    for d, amt, fr, to, n1, n2 in linked:
+        sys.stderr.write('  계좌이동: %s %s원  %s → %s  (%s / %s)\n'
+                         % (d, format(amt, ','), fr, to, n1[:24], n2[:24]))
+    sys.stderr.write('계좌 간 이동으로 묶은 짝: %d쌍\n' % len(linked))
+    return accounts
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('files', nargs='+')
     ap.add_argument('--password', help='암호 걸린 파일의 비밀번호 (생년월일 6자리)')
     ap.add_argument('--inspect', action='store_true', help='변환하지 않고 시트를 그대로 출력')
+    ap.add_argument('--no-link', action='store_true', help='계좌 간 이동 자동 매칭을 끈다')
     args = ap.parse_args()
 
     if args.inspect:
@@ -314,6 +363,8 @@ def main():
     for path in args.files:
         account, rows = convert(path, args.password)
         accounts.setdefault(account, []).extend(rows)
+    if not args.no_link and len(accounts) > 1:
+        link_transfers(accounts)
     print(json.dumps({'version': 1, 'accounts': accounts}, ensure_ascii=False, indent=2))
 
 
