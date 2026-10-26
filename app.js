@@ -1,9 +1,9 @@
 'use strict';
 
 const ACCOUNTS = {
-  gongeum: { key: 'fintrack_gongeum', label: '공금통장' },
-  car:     { key: 'fintrack_car',     label: '자동차마통' },
-  card:    { key: 'fintrack_card',    label: '카드' },
+  gongeum: { key: 'fintrack_gongeum', label: '공금마통',  acctNo: 'N0605513952' },
+  car:     { key: 'fintrack_car',     label: '차마통',    acctNo: 'N4776202988' },
+  card:    { key: 'fintrack_card',    label: '카드',      acctNo: null },
 };
 
 // 카테고리는 이 배열만 고치면 전체에 반영된다.
