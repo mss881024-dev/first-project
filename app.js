@@ -1,9 +1,9 @@
 'use strict';
 
 const ACCOUNTS = {
-  gongeum: { key: 'fintrack_gongeum', label: '공금마통',  acctNo: 'N0605513952' },
-  car:     { key: 'fintrack_car',     label: '차마통',    acctNo: 'N4776202988' },
-  card:    { key: 'fintrack_card',    label: '카드',      acctNo: null },
+  gongeum: { key: 'fintrack_gongeum', label: '공금마통' },
+  car:     { key: 'fintrack_car',     label: '차마통' },
+  card:    { key: 'fintrack_card',    label: '카드' },
 };
 
 // 카테고리는 이 배열만 고치면 전체에 반영된다.
@@ -17,6 +17,11 @@ const INCOME_CATEGORIES = ['월급·상여', '사업·부수입', '환급·이�
 // 빌린 돈·돌려받은 돈은 벌어서 쓸 수 있는 돈이 아니므로 월 예산 총액에서 뺀다.
 const INCOME_EXCLUDED_FROM_BUDGET = ['대출·차입', '대차 회수'];
 const TRANSFER_CATEGORY = '계좌이동';
+const SETTINGS_KEY = 'fintrack_settings';
+// 월급은 코드에 적지 않는다(이 저장소는 public). 각자 브라우저에서 '수정'으로 넣으면
+// localStorage에만 저장된다.
+const DEFAULT_SALARY = 0;
+const DEBT_CATEGORY = '대차(빌림·빌려줌)';
 const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
 const CARD_ACCOUNT  = 'card';
 // 소비는 아니지만 돈이 나간 항목 — '남은 금액'에서는 빼고, '쓴 돈'에는 안 넣는다.
@@ -33,6 +38,19 @@ let selectedType   = 'expense';
 let selectedDir    = 'out';
 let pendingDelete  = null;
 let undoTimer      = null;
+
+function loadSettings() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+    return { salary: raw.salary || DEFAULT_SALARY, overrides: raw.overrides || {} };
+  } catch { return { salary: DEFAULT_SALARY, overrides: {} }; }
+}
+function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+// 월급은 거래내역에서 뽑지 않는다 — 급여 계좌가 따로 있어서 이 계좌들에는 안 들어온다.
+function salaryFor(mKey) {
+  const s = loadSettings();
+  return mKey in s.overrides ? s.overrides[mKey] : s.salary;
+}
 
 function loadData(account) {
   try {
@@ -57,6 +75,8 @@ function normalize(t) {
     dir: type === 'transfer' ? (t.dir === 'in' ? 'in' : 'out') : null,
     // 카드는 '언제 긁었나'(date)와 '언제 빠지나'(bm, 청구월)가 다르다. 집계는 bm 기준.
     bm: /^\d{4}-\d{2}$/.test(String(t.bm || '')) ? t.bm : String(t.date || '').slice(0,7),
+    issuer: t.issuer || '',   // 카드 거래: 국민/BC/현대
+    peer: t.peer || '',       // 대차 거래: 상대방
     note: t.note || '',
     createdAt: t.createdAt || 0,
   };
@@ -96,6 +116,10 @@ const elOvBar        = el('ovBar');
 const elOvDaily      = el('ovDaily');
 const elOvDelta      = el('ovDelta');
 const elOvWarn       = el('ovWarn');
+const elOvSalaryEdit = el('ovSalaryEdit');
+const elDebtPanel    = el('debtPanel');
+const elDebtList     = el('debtList');
+const elDebtEmpty    = el('debtEmpty');
 const elCashFlow     = el('cashFlow');
 const elCardFlow     = el('cardFlow');
 const elCfCarry      = el('cfCarry');
@@ -149,14 +173,13 @@ function renderSummary(txns) {
 // 카드 사용액은 통장에서 다음 달에 빠지더라도 '이번 달에 쓴 돈'으로 보고 지금 차감한다.
 // 그래서 통장의 '카드대금' 출금은 여기서 세지 않는다(이중 계상 방지).
 function monthTotals(mKey) {
-  let income = 0, otherIncome = 0, bankSpend = 0, other = 0, cardPaid = 0;
+  let otherIncome = 0, bankSpend = 0, other = 0, cardPaid = 0;
+  const income = salaryFor(mKey);
   BANK_ACCOUNTS.forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
-      if (t.type === 'income') {
-        if (INCOME_EXCLUDED_FROM_BUDGET.indexOf(t.category) !== -1) otherIncome += t.amount;
-        else income += t.amount;
-        return;
-      }
+      // 거래내역의 입금은 급여 계좌에서 옮겨온 돈·대출·대차 회수가 대부분이라
+      // 월급 총액에 더하면 이중 계상이 된다. 전부 '그 외 유입(미포함)'으로 돌린다.
+      if (t.type === 'income') { otherIncome += t.amount; return; }
       if (t.type === 'transfer') { other += (t.dir === 'out' ? t.amount : -t.amount); return; }
       if (t.category === '카드대금') { cardPaid += t.amount; return; }
       if (NON_SPENDING_OUTFLOW.indexOf(t.category) !== -1) { other += t.amount; return; }
@@ -176,6 +199,7 @@ function renderOverview() {
   elOvLeft.textContent = (t.left < 0 ? '-' : '') + fmtWon(t.left);
   elOvLeft.className   = 'ov-left-amt' + (t.left < 0 ? ' negative' : '');
   elOvIncome.textContent = '+' + fmtWon(t.income);
+  elOvSalaryEdit.dataset.month = mKey;
   elOvCard.textContent   = '-' + fmtWon(t.cardUse);
   elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
   elOvOtherRow.style.display = t.other === 0 ? 'none' : '';
@@ -242,6 +266,52 @@ function renderCardFlow(txns) {
   const prev = getMonthlyTxns(CARD_ACCOUNT, prevMonthKey()).filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
   elCardUse.textContent  = fmtWon(use);
   elCardPrev.textContent = fmtWon(prev);
+
+  // 카드 한 탭에 3장을 모았으니 카드사별 내림은 따로 보여준다.
+  const byIssuer = {};
+  txns.filter(t => t.type === 'expense').forEach(t => {
+    const k = t.issuer || '미지정';
+    byIssuer[k] = (byIssuer[k] || 0) + t.amount;
+  });
+  const keys = Object.keys(byIssuer).sort((a,b) => byIssuer[b] - byIssuer[a]);
+  el('cardIssuers').innerHTML = keys.length <= 1 ? '' : keys.map(k =>
+    '<div class="cf-row"><span class="cf-label">' + escHtml(k) + '</span>' +
+    '<span class="cf-amt">' + fmtWon(byIssuer[k]) + '</span></div>').join('');
+}
+
+// 대차: 상대방별로 '내가 준 돈 - 받은 돈'을 모아 미정산 잔액을 낸다.
+// (+)는 내가 받을 돈, (-)는 내가 줄 돈.
+function debtByPeer() {
+  const net = {}, log = {};
+  BANK_ACCOUNTS.forEach(a => {
+    getTransactions(a).forEach(t => {
+      if (t.category !== DEBT_CATEGORY) return;
+      const peer = t.peer || '기타';
+      const sign = t.type === 'expense' ? 1 : -1;
+      net[peer] = (net[peer] || 0) + sign * t.amount;
+      (log[peer] = log[peer] || []).push(t);
+    });
+  });
+  return Object.keys(net)
+    .map(p => ({ peer: p, net: net[p], count: log[p].length }))
+    .sort((a,b) => Math.abs(b.net) - Math.abs(a.net));
+}
+
+function renderDebt() {
+  const rows = debtByPeer().filter(r => r.net !== 0 || r.count);
+  if (rows.length === 0) { elDebtEmpty.style.display = ''; elDebtList.innerHTML = ''; return; }
+  elDebtEmpty.style.display = 'none';
+  const toGet = rows.filter(r => r.net > 0).reduce((s,r) => s + r.net, 0);
+  const toPay = rows.filter(r => r.net < 0).reduce((s,r) => s - r.net, 0);
+  elDebtList.innerHTML =
+    '<div class="debt-total"><span>받을 돈 <b class="income">' + fmtWon(toGet) + '</b></span>' +
+    '<span>줄 돈 <b class="expense">' + fmtWon(toPay) + '</b></span></div>' +
+    rows.map(r =>
+      '<div class="debt-row"><span class="debt-peer">' + escHtml(r.peer) +
+      '<em>' + r.count + '건</em></span>' +
+      '<span class="debt-amt ' + (r.net > 0 ? 'income' : r.net < 0 ? 'expense' : 'muted') + '">' +
+        (r.net > 0 ? '받을 ' : r.net < 0 ? '줄 ' : '정산됨 ') + fmtWon(r.net) +
+      '</span></div>').join('');
 }
 
 function renderCategories(txns) {
@@ -281,6 +351,8 @@ function renderList(txns) {
         '<span class="txn-cat">' + escHtml(
             t.category
             + (t.type === 'transfer' ? (t.dir === 'in' ? ' · 받음' : ' · 보냄') : '')
+            + (t.issuer ? ' · ' + t.issuer : '')
+            + (t.peer ? ' · ' + t.peer : '')
             + (currentAccount === CARD_ACCOUNT && t.bm !== t.date.slice(0,7)
                ? ' · 이용 ' + t.date.slice(5).replace('-','.') : '')
           ) + '</span>' +
@@ -293,14 +365,24 @@ function renderList(txns) {
 
 function render() {
   elMonthLabel.textContent = currentYear + '년 ' + currentMonth + '월';
+  renderOverview();
+  if (currentAccount === 'debt') { renderDebt(); return; }
   const txns = getMonthlyTxns();
-  renderOverview(); renderSummary(txns); renderCategories(txns); renderList(txns);
+  renderSummary(txns); renderCategories(txns); renderList(txns);
 }
 
 function setAccount(account) {
   currentAccount = account;
   Array.from(elTabs.children).forEach(b => b.classList.toggle('active', b.dataset.account === account));
   document.body.className = 'account-' + account;
+  // 대차는 계좌가 아니라 '상대방별 미정산' 화면이라 계좌용 영역을 모두 숨긴다.
+  const isDebt = account === 'debt';
+  elDebtPanel.style.display = isDebt ? '' : 'none';
+  elCashFlow.style.display  = 'none';
+  elCardFlow.style.display  = 'none';
+  elCatSection.style.display = isDebt ? 'none' : '';
+  elTxnList.style.display   = isDebt ? 'none' : '';
+  el('fabBtn').style.display = isDebt ? 'none' : '';
   render();
 }
 
@@ -388,6 +470,22 @@ function showSnackbar(msg, undoable) {
   elSnackbar.classList.remove('hidden');
   if (!undoable) setTimeout(() => elSnackbar.classList.add('hidden'), 2500);
 }
+
+elOvSalaryEdit.addEventListener('click', () => {
+  const mKey = elOvSalaryEdit.dataset.month;
+  const cur = salaryFor(mKey);
+  const input = prompt(mKey + ' 월급(수입 총액)을 입력하세요.\n비우면 기본값(' + fmtWon(loadSettings().salary) + ')으로 돌아갑니다.', cur);
+  if (input === null) return;
+  const s = loadSettings();
+  if (input.trim() === '') { delete s.overrides[mKey]; }
+  else {
+    const n = parseInt(input.replace(/[^0-9]/g, ''), 10);
+    if (!n) return;
+    if (confirm('이 금액을 기본 월급으로도 쓸까요?\n확인=기본값까지 변경, 취소=' + mKey + '만 변경')) s.salary = n;
+    else s.overrides[mKey] = n;
+  }
+  saveSettings(s); render();
+});
 
 /* ---------- 데이터 관리 (내보내기 / 가져오기 / 초기화) ---------- */
 

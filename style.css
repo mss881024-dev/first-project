@@ -401,3 +401,29 @@ select.form-control { appearance: none; }
   background: #FEF3C7; color: #92400E; border-radius: 8px;
   font-size: 0.74rem; font-weight: 700; text-align: center;
 }
+
+/* ---------- 대차 탭 ---------- */
+body.account-debt .tab-btn.active { color: #0891B2; border-bottom-color: #0891B2; }
+.debt-total {
+  display: flex; justify-content: space-between;
+  padding-bottom: 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border);
+  font-size: 0.8rem; color: var(--muted); font-weight: 600;
+}
+.debt-total b { font-weight: 800; margin-left: 4px; letter-spacing: -0.3px; }
+.debt-total b.income  { color: var(--income); }
+.debt-total b.expense { color: var(--expense); }
+.debt-row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; }
+.debt-peer { font-size: 0.9rem; font-weight: 600; }
+.debt-peer em { font-style: normal; font-size: 0.68rem; color: var(--muted); margin-left: 6px; }
+.debt-amt { font-size: 0.9rem; font-weight: 700; letter-spacing: -0.3px; }
+.debt-amt.income  { color: var(--income); }
+.debt-amt.expense { color: var(--expense); }
+.debt-amt.muted   { color: var(--muted); }
+
+/* ---------- 월급 수정 버튼 ---------- */
+.ov-edit {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; padding: 1px 6px; margin-left: 6px;
+  font-size: 0.62rem; font-weight: 700; cursor: pointer;
+}
+.ov-edit:hover { color: var(--text); }

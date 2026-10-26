@@ -1,0 +1,6 @@
+{
+  "_설명": "이 파일을 local_config.json 으로 복사해서 본인 값으로 채우세요. local_config.json 은 git에 올라가지 않습니다.",
+  "self_name": "본인이름",
+  "peers": ["자주 주고받는 사람 이름들"],
+  "accounts": { "파일명에 들어있는 계좌식별자": "gongeum" }
+}

@@ -14,23 +14,33 @@
 import argparse
 import io
 import json
+import os
 import re
 import sys
 
 import openpyxl
 
-# 계좌번호 → 앱의 탭. app.js의 ACCOUNTS와 같아야 한다.
-ACCOUNT_BY_NO = {
-    'N0605513952': 'gongeum',   # 공금마통
-    'N4776202988': 'car',       # 차마통
-}
+# 개인정보(본인 이름·지인 이름·계좌번호)는 이 저장소에 두지 않는다.
+# 저장소가 public이고, 지인 이름은 본인 정보도 아니다.
+# scripts/local_config.json (gitignore 대상)에 두고 읽어 쓴다. 없으면 빈 값으로 동작한다.
+#   { "self_name": "...", "peers": ["..."], "accounts": { "N0000000000": "gongeum" } }
+_CFG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'local_config.json')
+try:
+    with open(_CFG_PATH, encoding='utf-8') as _f:
+        _CFG = json.load(_f)
+except FileNotFoundError:
+    _CFG = {}
+
+ACCOUNT_BY_NO = _CFG.get('accounts', {})
+SELF_NAME = _CFG.get('self_name', '')
+PEERS = _CFG.get('peers', [])
 
 # 적요/거래내용에 이 말이 들어가면 그 카테고리로 본다. 위에서부터 먼저 맞는 것을 쓴다.
 EXPENSE_RULES = [
     (r'카드대금|카드결제|[가-힣]{2,4}카드',        '카드대금'),
     (r'이자|대출이자',                             '대출·이자'),
     (r'대출|마이너스|한도',                        '대출·이자'),
-    (r'보험|국민연금|건강보험|세금|지방세|자동차세', '보험·세금'),
+    (r'보험|국민연금|건강보험|세금|지방세|자동차세|인지세', '보험·세금'),
     (r'관리비|관리사무소|전기|가스|수도|통신|SKT|KT|LG U\+', '주거·통신'),
     (r'주유|S-OIL|GS칼텍스|하이패스|주차|정비|톨', '교통·차량'),
     (r'병원|의원|약국|치과',                       '의료'),
@@ -43,6 +53,12 @@ INCOME_RULES = [
     (r'대출|마이너스|한도|차입',     '대출·차입'),
     (r'이자|환급|정산|환불',         '환급·이자'),
 ]
+
+# 대차(빌림·빌려줌·갚음)로 보는 말. 메모에 이게 있으면 상대방이 없어도 대차로 분류한다.
+DEBT_WORDS = r'빌림|빌려|빌린|갚음|갚을|갚아|받을\s*예정|받기러|받아야|선출|채움|대여|차입금'
+
+CARD_ISSUERS = [('국민', r'국민|KB'), ('BC', r'BC|비씨'), ('현대', r'현대카드'),
+                ('신한', r'신한'), ('삼성', r'삼성카드'), ('롯데', r'롯데카드')]
 
 SALARY_DAY = 25          # 월급일
 SALARY_DAY_WINDOW = 2    # 주말이면 당겨지므로 23~25일 입금도 월급 후보로 본다
@@ -109,7 +125,46 @@ def parse_amount(v):
     return int(abs(int(digits))) if digits not in ('', '-') else 0
 
 
-def classify(kind, note, date):
+def find_peer(note, name_field):
+    """상대방 이름. 아는 지인이 먼저고, 없으면 '내용' 열이 이름 하나로만 되어 있을 때만 쓴다.
+    '자동차 잔금', '미안해'처럼 메모가 들어온 칸을 사람으로 잡으면 미정산 잔액이 엉킨다."""
+    for p in PEERS:
+        if p in note:
+            return p
+    token = re.sub(r'[(),_]', ' ', name_field).strip()
+    if re.fullmatch(r'[가-힣]{2,4}', token) and token != SELF_NAME and not re.search(
+            r'이체|입금|출금|카드|이자|보험|세금|생활비|휴가비|원비|축의금|부조금|월급|급여|상여'
+            r'|자동차|주식|가방|잔금|계약금|원비|칠순|돌잔치|축하금'
+            r'|갚|받을|예정|완료|카펫|라탄|현금|부족분|보조|용돈', token):
+        return token
+    return ''
+
+
+def classify(kind, note, date, name_field=''):
+    """(type, category, peer, issuer)를 돌려준다. type은 income/expense/transfer."""
+    peer = find_peer(note, name_field)
+    known = peer in PEERS
+    issuer = ''
+    for name, pattern in CARD_ISSUERS:
+        if re.search(pattern, note):
+            issuer = name
+            break
+
+    # 본인 이름으로 오가는 돈은 급여계좌·다른 계좌와의 이동이다. 지출로 세면 소비가 부풀고,
+    # 수입으로 세면 월급이 이중 계상된다. 단, 지인 이름이 같이 있으면 그쪽이 먼저다.
+    if SELF_NAME and SELF_NAME in note and not peer:
+        return ('transfer', '계좌이동', '', issuer)
+
+    # 대차는 ①빌림·갚음류 표현이 있을 때 ②아는 지인과의 단순 이체일 때만.
+    # 모르는 이름까지 대차로 돌리면 미정산 잔액이 쓸 수 없는 숫자가 된다.
+    if re.search(DEBT_WORDS, note) or (known and re.search(r'일반이체|일반입금|오픈뱅킹', note)):
+        return (kind, '대차(빌림·빌려줌)', peer, issuer)
+
+    # 대차가 아니면 상대방은 정보로만 남긴다(집계에는 안 들어감).
+    return (kind, _by_rules(kind, note, date), peer, issuer)
+
+
+def _by_rules(kind, note, date):
     rules = INCOME_RULES if kind == 'income' else EXPENSE_RULES
     # 체크카드·직불은 통장에서 바로 빠지는 실제 소비다. 신용카드 결제대금이 아니므로
     # '카드대금' 규칙을 빼고 가맹점 기준으로 분류한다(안 그러면 지출 집계에서 빠져버린다).
@@ -141,6 +196,7 @@ def convert(path, password=None):
     c_amount = col_of(header, '거래금액', '금액')
     # 적요가 '거래구분/상대방/메모'로 흩어져 있어서(카카오뱅크 서식) 텍스트 열을 모두 모아야
     # 분류가 제대로 된다. 한 열만 읽으면 '대출이자', '관리비' 같은 단서를 놓친다.
+    c_name = col_of(header, '내용', '적요', '상대방')
     used = {c_date, c_type, c_in, c_out, c_amount}
     note_cols = [i for i, name in enumerate(header)
                  if i not in used
@@ -172,10 +228,16 @@ def convert(path, password=None):
             skipped += 1
             continue
 
-        rows.append({
-            'date': date, 'type': kind, 'amount': amount,
-            'category': classify(kind, note, date), 'note': note,
-        })
+        name_field = str(get(c_name) or '').strip()
+        kind2, category, peer, issuer = classify(kind, note, date, name_field)
+        row = {'date': date, 'type': kind2, 'amount': amount, 'category': category, 'note': note}
+        if kind2 == 'transfer':
+            row['dir'] = 'out' if kind == 'expense' else 'in'
+        if peer:
+            row['peer'] = peer
+        if issuer:
+            row['issuer'] = issuer
+        rows.append(row)
 
     sys.stderr.write('%s → %s: %d건 (건너뜀 %d)\n' % (path, ACCOUNTS_LABEL.get(account, account), len(rows), skipped))
     return account, rows

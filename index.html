@@ -24,10 +24,10 @@
     <span class="ov-daily" id="ovDaily"></span>
     <div class="ov-bar"><div class="ov-bar-fill" id="ovBar"></div></div>
     <div class="ov-rows">
-      <div class="ov-row"><span class="ov-row-label">수입 <em>월급·상여 등</em></span><span class="ov-amt income" id="ovIncome">+₩0</span></div>
+      <div class="ov-row"><span class="ov-row-label">수입 <em>월급 (고정)</em> <button class="ov-edit" id="ovSalaryEdit" title="월급 수정">수정</button></span><span class="ov-amt income" id="ovIncome">+₩0</span></div>
       <div class="ov-row"><span class="ov-row-label">카드값 <em>이 달 명세서 기준</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
       <div class="ov-row"><span class="ov-row-label">통장 지출 <em>카드 외</em></span><span class="ov-amt expense" id="ovBank">-₩0</span></div>
-      <div class="ov-row muted" id="ovInRow" style="display:none"><span class="ov-row-label">그 외 유입 <em>대출·차입 — 남은 금액에 미포함</em></span><span class="ov-amt" id="ovOtherIn">₩0</span></div>
+      <div class="ov-row muted" id="ovInRow" style="display:none"><span class="ov-row-label">그 외 유입 <em>이체·대출·대차 회수 — 미포함</em></span><span class="ov-amt" id="ovOtherIn">₩0</span></div>
       <div class="ov-row" id="ovOtherRow" style="display:none"><span class="ov-row-label">그 외 유출 <em>대차·투자·이체</em></span><span class="ov-amt expense" id="ovOther">-₩0</span></div>
     </div>
     <span class="ov-warn" id="ovWarn" style="display:none"></span>
@@ -38,6 +38,7 @@
     <button class="tab-btn active" data-account="gongeum">공금마통</button>
     <button class="tab-btn" data-account="car">차마통</button>
     <button class="tab-btn" data-account="card">카드</button>
+    <button class="tab-btn" data-account="debt">대차</button>
   </div>
 
   <section class="cash-flow" id="cashFlow">
@@ -56,6 +57,13 @@
       <span class="cf-left-amt negative" id="cardUse">₩0</span>
     </div>
     <div class="cf-row"><span class="cf-label">전월 청구액</span><span class="cf-amt" id="cardPrev">₩0</span></div>
+    <div id="cardIssuers"></div>
+  </section>
+
+  <section class="cash-flow" id="debtPanel" style="display:none">
+    <h2 class="section-title">상대방별 미정산 <span class="section-total">대차</span></h2>
+    <div id="debtList"></div>
+    <div class="empty-state" id="debtEmpty" style="display:none">대차 거래가 없습니다.</div>
   </section>
 
   <section class="category-section" id="categorySection" style="display:none">
