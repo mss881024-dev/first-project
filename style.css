@@ -392,3 +392,5 @@ select.form-control { appearance: none; }
 .ov-delta.up   { color: var(--expense); }
 .ov-delta.down { color: var(--income); }
 .section-total { float: right; color: var(--text); font-weight: 800; letter-spacing: -0.3px; }
+
+.ov-row.muted .ov-amt { color: var(--muted); }

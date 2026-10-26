@@ -12,6 +12,10 @@ const CATEGORIES = [
   '경조사', '여행', '쇼핑', '취미·여가', '교육',
   '대출·이자', '투자', '대차(빌림·빌려줌)', '카드대금', '기타',
 ];
+// 입금 카테고리. '남은 금액'의 총액이 되는 것과, 총액에서 빼는 것을 구분한다.
+const INCOME_CATEGORIES = ['월급·상여', '사업·부수입', '환급·이자', '대차 회수', '대출·차입', '기타수입'];
+// 빌린 돈·돌려받은 돈은 벌어서 쓸 수 있는 돈이 아니므로 월 예산 총액에서 뺀다.
+const INCOME_EXCLUDED_FROM_BUDGET = ['대출·차입', '대차 회수'];
 const TRANSFER_CATEGORY = '계좌이동';
 const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
 const CARD_ACCOUNT  = 'card';
@@ -49,7 +53,7 @@ function normalize(t) {
     type,
     date: t.date,
     amount: Math.abs(Number(t.amount) || 0),
-    category: t.category || (type === 'transfer' ? TRANSFER_CATEGORY : '기타'),
+    category: t.category || (type === 'transfer' ? TRANSFER_CATEGORY : type === 'income' ? '기타수입' : '기타'),
     dir: type === 'transfer' ? (t.dir === 'in' ? 'in' : 'out') : null,
     note: t.note || '',
     createdAt: t.createdAt || 0,
@@ -84,6 +88,8 @@ const elOvCard       = el('ovCard');
 const elOvBank       = el('ovBank');
 const elOvOther      = el('ovOther');
 const elOvOtherRow   = el('ovOtherRow');
+const elOvOtherIn    = el('ovOtherIn');
+const elOvInRow      = el('ovInRow');
 const elOvBar        = el('ovBar');
 const elOvDaily      = el('ovDaily');
 const elOvDelta      = el('ovDelta');
@@ -114,8 +120,9 @@ const elDataOverlay  = el('dataOverlay');
 const elImportText   = el('importText');
 const elImportFile   = el('importFile');
 
-function renderCategoryOptions() {
-  elInputCategory.innerHTML = CATEGORIES
+function renderCategoryOptions(type) {
+  const list = type === 'income' ? INCOME_CATEGORIES : CATEGORIES;
+  elInputCategory.innerHTML = list
     .map(c => '<option value="' + escHtml(c) + '">' + escHtml(c) + '</option>').join('');
 }
 
@@ -133,10 +140,14 @@ function renderSummary(txns) {
 // 카드 사용액은 통장에서 다음 달에 빠지더라도 '이번 달에 쓴 돈'으로 보고 지금 차감한다.
 // 그래서 통장의 '카드대금' 출금은 여기서 세지 않는다(이중 계상 방지).
 function monthTotals(mKey) {
-  let income = 0, bankSpend = 0, other = 0;
+  let income = 0, otherIncome = 0, bankSpend = 0, other = 0;
   BANK_ACCOUNTS.forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
-      if (t.type === 'income') { income += t.amount; return; }
+      if (t.type === 'income') {
+        if (INCOME_EXCLUDED_FROM_BUDGET.indexOf(t.category) !== -1) otherIncome += t.amount;
+        else income += t.amount;
+        return;
+      }
       if (t.type === 'transfer') { other += (t.dir === 'out' ? t.amount : -t.amount); return; }
       if (t.category === '카드대금') return;
       if (NON_SPENDING_OUTFLOW.indexOf(t.category) !== -1) { other += t.amount; return; }
@@ -146,7 +157,7 @@ function monthTotals(mKey) {
   const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
     .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
   const spent = bankSpend + cardUse;
-  return { income, bankSpend, cardUse, other, spent, left: income - spent - other };
+  return { income, otherIncome, bankSpend, cardUse, other, spent, left: income - spent - other };
 }
 
 function renderOverview() {
@@ -160,6 +171,8 @@ function renderOverview() {
   elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
   elOvOtherRow.style.display = t.other === 0 ? 'none' : '';
   elOvOther.textContent  = (t.other < 0 ? '+' : '-') + fmtWon(t.other);
+  elOvInRow.style.display = t.otherIncome === 0 ? 'none' : '';
+  elOvOtherIn.textContent = fmtWon(t.otherIncome);
 
   const used = t.spent + Math.max(t.other, 0);
   const pct  = t.income > 0 ? Math.min(100, Math.round(used / t.income * 100)) : 0;
@@ -280,12 +293,12 @@ function setSegment(type) {
   });
   elCategoryGroup.style.display = type === 'transfer' ? 'none' : '';
   elDirGroup.style.display = type === 'transfer' ? '' : 'none';
+  if (type !== 'transfer') renderCategoryOptions(type);
 }
 
 function openModal() {
   elInputDate.value = new Date().toISOString().slice(0,10);
   elInputAmount.value = ''; elInputNote.value = '';
-  elInputCategory.value = CATEGORIES[0];
   setSegment('expense'); setDir('out');
   elModalOverlay.classList.remove('hidden');
   setTimeout(() => elInputAmount.focus(), 150);
@@ -431,5 +444,5 @@ document.addEventListener('keydown', e => {
   closeModal(); elDataOverlay.classList.add('hidden');
 });
 
-renderCategoryOptions();
+renderCategoryOptions('expense');
 setAccount('gongeum');
