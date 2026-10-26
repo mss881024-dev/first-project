@@ -32,6 +32,15 @@ except FileNotFoundError:
     _CFG = {}
 
 ACCOUNT_BY_NO = _CFG.get('accounts', {})
+# 적요만으로는 구분이 안 되는 거래를 손으로 바로잡는 표.
+# 예: 적요가 지인 이름인데 실제로는 사업자대출이 그 계좌를 거쳐 들어온 경우.
+#   "overrides": [
+#     {"account":"car", "date":"2026-05-18", "amount":10000000,
+#      "category":"대출·차입", "peer":"", "memo":"사업자대출(천상현 계좌 경유)"}
+#   ]
+# 조건(account/date/date_from/date_to/amount/note_contains/peer)이 모두 맞는 거래에
+# category·type·peer·issuer를 덮어쓴다. 먼저 맞는 항목 하나만 적용된다.
+OVERRIDES = _CFG.get('overrides', [])
 SELF_NAME = _CFG.get('self_name', '')
 PEERS = _CFG.get('peers', [])
 
@@ -123,6 +132,35 @@ def parse_amount(v):
         return int(abs(v))
     digits = re.sub(r'[^0-9-]', '', str(v))
     return int(abs(int(digits))) if digits not in ('', '-') else 0
+
+
+def apply_override(account, row, note):
+    for o in OVERRIDES:
+        if 'account' in o and o['account'] != account:
+            continue
+        if 'date' in o and o['date'] != row['date']:
+            continue
+        if 'date_from' in o and row['date'] < o['date_from']:
+            continue
+        if 'date_to' in o and row['date'] > o['date_to']:
+            continue
+        if 'amount' in o and int(o['amount']) != row['amount']:
+            continue
+        if 'note_contains' in o and o['note_contains'] not in note:
+            continue
+        if 'peer' in o and o.get('match_peer') and o['peer'] != row.get('peer', ''):
+            continue
+        for key in ('category', 'type', 'issuer'):
+            if key in o:
+                row[key] = o[key]
+        if 'peer' in o:
+            if o['peer']:
+                row['peer'] = o['peer']
+            else:
+                row.pop('peer', None)
+        row['overridden'] = True
+        return True
+    return False
 
 
 def find_peer(note, name_field):
@@ -250,6 +288,7 @@ def convert(path, password=None):
             row['peer'] = peer
         if issuer:
             row['issuer'] = issuer
+        apply_override(account, row, note)
         rows.append(row)
 
     sys.stderr.write('%s → %s: %d건 (건너뜀 %d)\n' % (path, ACCOUNTS_LABEL.get(account, account), len(rows), skipped))
