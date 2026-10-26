@@ -50,6 +50,10 @@ const CARD_ACCOUNT  = 'card';
 //  - 카드대금: 통장에서 빠진 이 금액을 카드 명세서 상세가 대체한다 (둘 다 세면 이중)
 //  - 계좌이동(transfer): 내 계좌끼리 옮긴 돈은 전체로 보면 늘지도 줄지도 않는다
 const EXCLUDED_AS_DOUBLE_COUNT = ['카드대금'];
+// 가계(월급 기준 생활비) 범위 밖. 마통 운용·빚·투자는 성격이 달라 따로 본다.
+// 화면의 '이 정산이 다루는 범위' 문구와 같은 기준이어야 한다.
+const OUT_OF_HOUSEHOLD_EXPENSE = ['대차(빌림·빌려줌)', '대출·이자', '투자'];
+const OUT_OF_HOUSEHOLD_INCOME  = ['대차 회수', '대출·차입'];
 
 let currentAccount = 'gongeum';
 let currentYear    = new Date().getFullYear();
@@ -77,7 +81,9 @@ function loadSettings() {
   }
 }
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
-// 월급은 거래내역에서 뽑지 않는다 — 급여 계좌가 따로 있어서 이 계좌들에는 안 들어온다.
+// 설정에 적어둔 월급. 그 달 통장에 급여 입금이 찍혀 있으면 그 실제 금액을 쓰고,
+// 이건 내역이 아직 없는 달의 '예정' 값으로만 쓴다. (급여는 급여계좌에서 공금마통으로
+// 자기이체로 넘어오므로 '계좌이동'으로 찍힌다 — 짝이 없는 입금이 그것이다.)
 function salaryFor(mKey) {
   const s = loadSettings();
   return mKey in s.overrides ? s.overrides[mKey] : s.salary;
@@ -162,6 +168,7 @@ const elOvWarn       = el('ovWarn');
 const elOverview     = el('overview');
 const elHouseNote    = el('houseNote');
 const elHouseStart   = el('houseStart');
+const elHouseFlow    = el('houseFlow');
 const elHsIn         = el('hsIn');
 const elHsFixed      = el('hsFixed');
 const elHsCard       = el('hsCard');
@@ -221,48 +228,103 @@ function renderSummary(txns) {
 
 }
 
-// 가계: 월급에서 가계 소비(카드값 + 생활비성 통장 지출)를 빼 남은 돈을 낸다.
-// 마통 운용(사업자대출·차 구매·지인 대차·대출이자)과 계좌 간 이동은 범위 밖이다.
+// 가계(월급 기준 정리). 흐름 기준이다 — 실제로 돈이 움직인 것만 '실제'로 센다.
+//
+// 설정값(월급·마통 보충·추가 수입·고정 지출·기타)은 그 달 통장 내역과 금액으로 맞춰본다.
+//  - 같은 금액의 거래가 그 달에 있으면 그 줄은 '실제'(real: true) 로 확정하고 그 거래를 소비한다.
+//  - 맞는 거래가 없으면 '예정'(real: false) 으로 남긴다. 아직 안 빠진 돈이거나 다른 계좌에서 나간 돈이다.
+//  - 어느 설정값에도 안 잡힌 통장 거래는 '통장에서 (적요)' 줄로 따로 세운다 — 빠뜨리지 않기 위해서다.
+// 총계는 실제 + 예정을 다 더한다. 예정이 섞여 있으면 화면에 그렇게 적는다.
 function householdTotals(mKey) {
   const cfg = loadSettings();
-  const salary = salaryFor(mKey);
-  const topup  = cfg.topup;
-  const fixed = cfg.fixed, etc = cfg.etc, separate = cfg.separate;
-  const fixedTotal = fixed.reduce((s,i) => s + (i.amount||0), 0);
-  const etcTotal   = etc.reduce((s,i) => s + (i.amount||0), 0);
+  const bankRows = getMonthlyTxns(BUDGET_ACCOUNT, mKey);
+  const hasBank  = bankRows.length > 0;
+
+  // 가계 범위 안의 통장 거래만 매칭 대상이다.
+  // 카드대금은 카드 명세서 상세가 대체하므로 뺀다(이중 계산).
+  const bankIn = bankRows.filter(t =>
+    (t.type === 'income' && OUT_OF_HOUSEHOLD_INCOME.indexOf(t.category) === -1) ||
+    (t.type === 'transfer' && t.dir === 'in' && t.category !== '카드대금'));
+  const bankOut = bankRows.filter(t =>
+    t.type === 'expense' &&
+    EXCLUDED_AS_DOUBLE_COUNT.indexOf(t.category) === -1 &&
+    OUT_OF_HOUSEHOLD_EXPENSE.indexOf(t.category) === -1);
+
+  // 같은 금액의 거래를 하나 집어 쓴다(한 번 쓴 거래는 다시 안 쓴다).
+  const take = (pool, amount) => {
+    const i = pool.findIndex(t => t.amount === amount);
+    return i === -1 ? null : pool.splice(i, 1)[0];
+  };
+  const leftIn = bankIn.slice(), leftOut = bankOut.slice();
+  const matched = (pool, name, amount, fallbackNote) => {
+    const hit = amount ? take(pool, amount) : null;
+    return hit
+      ? { name, amount: hit.amount, real: true, note: hit.note }
+      : { name, amount: amount || 0, real: false, note: fallbackNote || '' };
+  };
+
+  // ---- 들어온 돈 ----
+  // 월급: 짝 없는 자기이체 입금이 급여계좌에서 넘어온 돈이다. 금액이 같으면 그걸 쓴다.
+  const salarySet = salaryFor(mKey);
+  const inRows = [];
+  inRows.push(matched(leftIn, '월급', salarySet, '아직 입금 전'));
+  // 마통 보충: 짝이 확인된 계좌 간 이동만 실제로 센다.
+  const topupActual = topupFor(mKey);
+  if (topupActual > 0) {
+    // 실제 이동액은 위 매칭 풀에서도 빼둔다(같은 거래를 두 번 세지 않도록).
+    take(leftIn, topupActual);
+    inRows.push({ name: '마통에서', amount: topupActual, real: true, note: '실제 이동액' });
+  } else if (cfg.topup > 0) {
+    inRows.push({ name: '마통에서', amount: cfg.topup, real: false, note: '아직 안 옮김' });
+  }
+  cfg.income.forEach(i => inRows.push(matched(leftIn, i.name, i.amount || 0, '아직 입금 전')));
+  ((cfg.extraIn && cfg.extraIn[mKey]) || [])
+    .forEach(i => inRows.push(matched(leftIn, i.name, i.amount || 0, '아직 입금 전')));
+  // 설정에 없는 실제 입금도 빠뜨리지 않는다.
+  leftIn.forEach(t => inRows.push({
+    name: '통장에서 · ' + (t.note || t.category), amount: t.amount, real: true, note: '' }));
+
+  const inflow = inRows.reduce((s, r) => s + r.amount, 0);
+
+  // ---- 카드값 (항상 명세서 실제) ----
   const cardRows = getMonthlyTxns(CARD_ACCOUNT, mKey).filter(t => t.type === 'expense');
   const isMine = t => NON_HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1;
   const cardUse  = cardRows.filter(isMine).reduce((s,t) => s + t.amount, 0);
   const cardElse = cardRows.filter(t => !isMine(t)).reduce((s,t) => s + t.amount, 0);
-
-  const byCat = {};
-  let bankSpend = 0;
-  getMonthlyTxns(BUDGET_ACCOUNT, mKey).forEach(t => {
-    if (t.type !== 'expense') return;
-    if (HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1) return;
-    bankSpend += t.amount;
-    byCat[t.category] = (byCat[t.category] || 0) + t.amount;
-  });
-  cardRows.filter(isMine).forEach(t => {
-    const c = HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1 ? '기타' : t.category;
-    byCat[c] = (byCat[c] || 0) + t.amount;
-  });
-
   const byIssuer = {};
   cardRows.filter(isMine).forEach(t => {
     const k = t.issuer || '카드';
     byIssuer[k] = (byIssuer[k] || 0) + t.amount;
   });
 
-  // 매달 들어오는 추가 수입 + 그 달에만 들어온 돈
-  const income = cfg.income;
-  const extraIn = (cfg.extraIn && cfg.extraIn[mKey]) || [];
-  const incomeRows = income.concat(extraIn);
-  const incomeTotal = incomeRows.reduce((s,i) => s + (i.amount||0), 0);
+  // ---- 고정 지출 · 기타 ----
+  const fixed = cfg.fixed.map(i => matched(leftOut, i.name, i.amount || 0, '아직 안 빠짐'));
+  const etc   = cfg.etc.map(i => matched(leftOut, i.name, i.amount || 0, '아직 안 빠짐'));
+  // 설정에 없는 실제 통장 지출 — 기타로 모은다.
+  leftOut.forEach(t => etc.push({
+    name: '통장에서 · ' + (t.note || t.category), amount: t.amount, real: true, note: '' }));
+  const fixedTotal = fixed.reduce((s,i) => s + i.amount, 0);
+  const etcTotal   = etc.reduce((s,i) => s + i.amount, 0);
 
-  const inflow = salary + topup + incomeTotal;
-  const spent  = fixedTotal + cardUse + etcTotal;
-  return { salary, topup, incomeRows, incomeTotal, inflow, fixed, fixedTotal, etc, etcTotal, separate,
+  // 카테고리별 — 카드 명세서 + 통장 실제 지출
+  const byCat = {};
+  bankOut.forEach(t => {
+    const c = HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1 ? '기타' : t.category;
+    byCat[c] = (byCat[c] || 0) + t.amount;
+  });
+  cardRows.filter(isMine).forEach(t => {
+    const c = HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1 ? '기타' : t.category;
+    byCat[c] = (byCat[c] || 0) + t.amount;
+  });
+  const bankSpend = bankOut.reduce((s,t) => s + t.amount, 0);
+
+  const planned = inRows.concat(fixed, etc).filter(r => !r.real && r.amount).length;
+  const spent   = fixedTotal + cardUse + etcTotal;
+  // 나간 돈 중 거래내역으로 확인된 금액과, 아직 설정값인 금액
+  const spentReal = cardUse +
+    fixed.concat(etc).filter(r => r.real).reduce((s,r) => s + r.amount, 0);
+  return { inRows, inflow, hasBank, planned, spentReal, spentPlanned: spent - spentReal,
+           fixed, fixedTotal, etc, etcTotal, separate: cfg.separate,
            cardUse, cardElse, byIssuer, bankSpend, byCat, spent, left: inflow - spent };
 }
 
@@ -289,19 +351,22 @@ function renderHousehold() {
 
   const won = n => fmtWon(n);
   const line = (name, amt, cls) =>
-    '<div class="hs-row"><span class="hs-name">' + (name.indexOf('<button') >= 0 ? name : escHtml(name)) + '</span>' +
+    '<div class="hs-row"><span class="hs-name">' + (name.indexOf('<button') >= 0 || name.indexOf('<i ') >= 0 ? name : escHtml(name)) + '</span>' +
     '<span class="hs-amt' + (cls ? ' ' + cls : '') + '">' + amt + '</span></div>';
   const sub = (amt, cls) =>
     '<div class="hs-sub"><span>소계</span><span class="' + (cls||'') + '">' + amt + '</span></div>';
+  // 실제로 돈이 움직인 줄과, 아직 안 움직인 '예정' 줄을 구분해 보여준다.
+  const tag = r => r.real ? '' : '<i class="hs-tag" title="' + escHtml(r.note || '예정') + '">예정</i>';
+  const flowLine = (r, sign, cls, extra) =>
+    line(escHtml(r.name) + (extra || '') + tag(r), sign + won(r.amount), cls);
 
   elHsIn.innerHTML =
-    line('월급 <button class="hs-edit" data-edit="salary">수정</button>', '+' + won(h.salary), 'income') +
-    (h.topup ? line('마통에서', '+' + won(h.topup), 'income') : '') +
-    h.incomeRows.map(i => line(i.name, '+' + won(i.amount||0), 'income')).join('') +
+    h.inRows.map((r, i) => flowLine(r, '+', 'income',
+      r.name === '월급' ? ' <button class="hs-edit" data-edit="salary">수정</button>' : '')).join('') +
     sub('+' + won(h.inflow), 'income');
 
   elHsFixed.innerHTML = h.fixed.length
-    ? h.fixed.map(i => line(i.name, '-' + won(i.amount||0), 'expense')).join('') +
+    ? h.fixed.map(r => flowLine(r, '-', 'expense')).join('') +
       sub('-' + won(h.fixedTotal), 'expense')
     : '<div class="hs-empty">등록된 고정 지출이 없습니다</div>';
 
@@ -313,7 +378,7 @@ function renderHousehold() {
     sub('-' + won(h.cardUse), 'expense');
 
   elHsEtc.innerHTML = h.etc.length
-    ? h.etc.map(i => line(i.name, '-' + won(i.amount||0), 'expense')).join('') +
+    ? h.etc.map(r => flowLine(r, '-', 'expense')).join('') +
       sub('-' + won(h.etcTotal), 'expense')
     : '<div class="hs-empty">등록된 기타 항목이 없습니다</div>';
 
@@ -324,6 +389,15 @@ function renderHousehold() {
 
   elHsFormula.textContent =
     won(h.inflow) + ' − ' + won(h.fixedTotal) + ' − ' + won(h.cardUse) + ' − ' + won(h.etcTotal);
+
+  // 예정이 섞여 있으면 숨기지 않고 적는다.
+  elHouseFlow.style.display = h.planned ? '' : 'none';
+  if (h.planned) {
+    elHouseFlow.innerHTML = '<b>예정 ' + h.planned + '건이 섞여 있습니다</b>' +
+      (h.hasBank
+        ? '이 달 통장 내역에서 같은 금액을 찾지 못한 항목입니다 — 아직 안 빠졌거나 다른 계좌에서 나간 돈입니다.'
+        : '이 달 통장 내역이 아직 들어오지 않아, 카드값만 실제 금액이고 나머지는 설정값입니다. 내역을 넣으면 자동으로 실제 금액으로 바뀝니다.');
+  }
 
   const pct = h.inflow > 0 ? Math.min(100, Math.round(h.spent / h.inflow * 100)) : 0;
   elOvBar.style.width = pct + '%';
@@ -339,11 +413,11 @@ function renderHousehold() {
     elOvDaily.textContent = h.inflow > 0 ? '들어온 돈의 ' + pct + '% 사용' : '';
   }
 
-  // 통장에서 따로 나간 생활비가 있으면 알린다 (고정지출·기타와 중복 입력 방지)
-  if (h.bankSpend > 0) {
+  // 나간 돈이 얼마나 실제 확인된 금액인지 그대로 적는다.
+  if (h.spentPlanned > 0 && h.spent > 0) {
     elOvWarn.style.display = '';
-    elOvWarn.textContent = '공금마통 내역에 생활비 ' + won(h.bankSpend) +
-      '이 따로 있습니다 — 위 고정지출·기타와 중복이 아닌지 확인하세요';
+    elOvWarn.textContent = '나간 돈 ' + won(h.spent) + ' 중 ' + won(h.spentReal) +
+      '은 거래내역으로 확인, ' + won(h.spentPlanned) + '은 아직 설정값(예정)입니다';
   } else { elOvWarn.style.display = 'none'; }
 
   const prev = householdTotals(prevMonthKey());

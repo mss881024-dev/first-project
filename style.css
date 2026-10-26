@@ -437,6 +437,15 @@ body.account-house .tab-btn.active { color: var(--accent); border-bottom-color: 
 }
 .house-note b { display: inline; font-weight: 800; }
 .house-note b:first-child { display: block; margin-bottom: 4px; }
+/* 예정이 섞인 달 — 파란 안내와 구분되게 노란 계열로 */
+.house-flow { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+
+/* 실제로 돈이 움직이지 않은 줄 표시 */
+.hs-tag {
+  font-style: normal; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.02em;
+  background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;
+  border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: 1px;
+}
 
 /* ---------- 가계 탭 — 월 정산 양식 ---------- */
 .hs-sections { width: 100%; display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
