@@ -18,29 +18,33 @@
     <button class="data-btn" id="dataBtn" aria-label="데이터 관리">&#9881;</button>
   </header>
 
-  <section class="overview">
-    <span class="ov-label">이번 달 남은 생활비</span>
+  <div class="account-tabs" id="accountTabs">
+    <button class="tab-btn active" data-account="house">가계</button>
+    <button class="tab-btn" data-account="gongeum">공금마통</button>
+    <button class="tab-btn" data-account="car">차마통</button>
+    <button class="tab-btn" data-account="card">카드</button>
+    <button class="tab-btn" data-account="debt">대차</button>
+  </div>
+
+  <section class="overview" id="overview">
+    <span class="ov-label">이번 달 월급에서 남은 돈</span>
     <span class="ov-left-amt" id="ovLeft">₩0</span>
     <span class="ov-daily" id="ovDaily"></span>
     <div class="ov-bar"><div class="ov-bar-fill" id="ovBar"></div></div>
     <div class="ov-rows">
       <div class="ov-row"><span class="ov-row-label">월급 <em>고정</em> <button class="ov-edit" id="ovSalaryEdit" title="월급 수정">수정</button></span><span class="ov-amt income" id="ovIncome">+₩0</span></div>
-      <div class="ov-row"><span class="ov-row-label">카드값 <em>이 달 빠지는 명세서</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
-      <div class="ov-row"><span class="ov-row-label">공금마통에서 나간 돈 <em>카드 외 전부</em></span><span class="ov-amt expense" id="ovBank">-₩0</span></div>
-      <div class="ov-row" id="ovTopupRow" style="display:none"><span class="ov-row-label">차마통에서 가져온 돈 <em>그 달 실제 이동액</em></span><span class="ov-amt income" id="ovTopup">+₩0</span></div>
-      <div class="ov-row" id="ovInRow" style="display:none"><span class="ov-row-label">그 외 들어온 돈 <em>매각·환급·받은 돈 등</em></span><span class="ov-amt income" id="ovOtherIn">+₩0</span></div>
-      <div class="ov-row muted" id="ovOtherRow" style="display:none"><span class="ov-row-label">계좌끼리 옮긴 돈 <em>중복이라 안 셈</em></span><span class="ov-amt" id="ovOther">₩0</span></div>
+      <div class="ov-row"><span class="ov-row-label">카드값 <em>이 달 명세서</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
+      <div class="ov-row"><span class="ov-row-label">통장에서 쓴 생활비 <em>카드 외</em></span><span class="ov-amt expense" id="ovBank">-₩0</span></div>
     </div>
     <span class="ov-warn" id="ovWarn" style="display:none"></span>
     <span class="ov-delta" id="ovDelta"></span>
   </section>
 
-  <div class="account-tabs" id="accountTabs">
-    <button class="tab-btn active" data-account="gongeum">공금마통</button>
-    <button class="tab-btn" data-account="car">차마통</button>
-    <button class="tab-btn" data-account="card">카드</button>
-    <button class="tab-btn" data-account="debt">대차</button>
-  </div>
+  <section class="house-note" id="houseNote">
+    <b>이 화면이 다루는 범위</b>
+    월급에서 나가는 <b>가계 생활비만</b> 봅니다 — 카드값, 식비·생활비·주거·통신·보험·의료·교통·경조사·여행·쇼핑 등.
+    <br>마통 운용(사업자대출·차량 구매·대출이자)과 지인 간 대차는 <b>이 화면에 포함되지 않으며</b>, 공금마통·차마통·대차 탭에서 따로 관리합니다.
+  </section>
 
   <section class="cash-flow" id="cashFlow">
     <div class="cf-row"><span class="cf-label">이월 (전월말 잔액)</span><span class="cf-amt" id="cfCarry">₩0</span></div>

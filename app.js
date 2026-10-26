@@ -26,6 +26,13 @@ const BANK_ACCOUNTS = ['gongeum', 'car'];   // 잔액이 있는 계좌
 // '이번 달 남은 금액'은 생활비 계좌 기준으로 낸다. 차마통은 차·대출·목돈이 오가는
 // 계좌라 같이 더하면 생활비가 얼마 남았는지 안 보인다(차마통 탭에서 따로 본다).
 const BUDGET_ACCOUNT = 'gongeum';
+
+// 가계 탭(월급 기준)에 넣는 지출 카테고리. 마통 운용·대출·지인 대차는 들어가지 않는다.
+// 범위는 화면에 그대로 적어 보여준다.
+const HOUSEHOLD_CATEGORIES = [
+  '식비', '생활비', '주거·통신', '보험·세금', '의료',
+  '경조사', '여행', '쇼핑', '취미·여가', '교육', '교통·차량', '기타',
+];
 const CARD_ACCOUNT  = 'card';
 // 현금 흐름 기준이다. 나간 돈은 소비든 대차든 자산이든 전부 '나간 돈'으로 센다.
 // 집계에서 빼는 것은 '같은 돈을 두 번 세게 되는 것'뿐이다.
@@ -140,6 +147,8 @@ const elOvBar        = el('ovBar');
 const elOvDaily      = el('ovDaily');
 const elOvDelta      = el('ovDelta');
 const elOvWarn       = el('ovWarn');
+const elOverview     = el('overview');
+const elHouseNote    = el('houseNote');
 const elOvSalaryEdit = el('ovSalaryEdit');
 const elOvTopupRow   = el('ovTopupRow');
 const elOvTopup      = el('ovTopup');
@@ -272,6 +281,93 @@ function renderOverview() {
   elOvDelta.className = 'ov-delta' + (diff > 0 ? ' up' : ' down');
 }
 
+// 가계: 월급에서 가계 소비(카드값 + 생활비성 통장 지출)를 빼 남은 돈을 낸다.
+// 마통 운용(사업자대출·차 구매·지인 대차·대출이자)과 계좌 간 이동은 범위 밖이다.
+function householdTotals(mKey) {
+  const salary = salaryFor(mKey);
+  const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
+    .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+
+  const byCat = {};
+  let bankSpend = 0;
+  getMonthlyTxns(BUDGET_ACCOUNT, mKey).forEach(t => {
+    if (t.type !== 'expense') return;
+    if (HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1) return;
+    bankSpend += t.amount;
+    byCat[t.category] = (byCat[t.category] || 0) + t.amount;
+  });
+  getMonthlyTxns(CARD_ACCOUNT, mKey).forEach(t => {
+    if (t.type !== 'expense') return;
+    const c = HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1 ? '기타' : t.category;
+    byCat[c] = (byCat[c] || 0) + t.amount;
+  });
+
+  const spent = cardUse + bankSpend;
+  return { salary, cardUse, bankSpend, spent, byCat, left: salary - spent };
+}
+
+function renderHousehold() {
+  const mKey = monthKey(currentYear, currentMonth);
+  const h = householdTotals(mKey);
+
+  elOvLeft.textContent = (h.left < 0 ? '-' : '') + fmtWon(h.left);
+  elOvLeft.className   = 'ov-left-amt' + (h.left < 0 ? ' negative' : '');
+  elOvIncome.textContent = '+' + fmtWon(h.salary);
+  elOvCard.textContent   = '-' + fmtWon(h.cardUse);
+  elOvBank.textContent   = '-' + fmtWon(h.bankSpend);
+  elOvSalaryEdit.dataset.month = mKey;
+
+  const pct = h.salary > 0 ? Math.min(100, Math.round(h.spent / h.salary * 100)) : 0;
+  elOvBar.style.width = pct + '%';
+  elOvBar.className   = 'ov-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
+
+  const now = new Date();
+  if (now.getFullYear() === currentYear && now.getMonth() + 1 === currentMonth) {
+    const daysLeft = lastDayOf(currentYear, currentMonth) - now.getDate() + 1;
+    elOvDaily.textContent = h.left > 0
+      ? '남은 ' + daysLeft + '일 · 하루 ' + fmtWon(Math.floor(h.left / daysLeft)) + ' 쓸 수 있음'
+      : '월급 초과';
+  } else {
+    elOvDaily.textContent = h.salary > 0 ? '월급의 ' + pct + '% 사용' : '';
+  }
+
+  // 카드 명세서가 안 들어온 달은 카드값이 0으로 나와 남은 돈이 부풀려진다. 그걸 알린다.
+  const cardPaid = getMonthlyTxns(BUDGET_ACCOUNT, mKey)
+    .filter(t => t.type === 'expense' && t.category === '카드대금')
+    .reduce((s,t) => s + t.amount, 0);
+  if (h.cardUse === 0 && cardPaid > 0) {
+    elOvWarn.style.display = '';
+    elOvWarn.textContent = '카드 명세서 미적재 — 통장에서 빠진 카드대금 ' + fmtWon(cardPaid) + '이 반영 안 됨';
+  } else if (cardPaid > 0 && h.cardUse !== cardPaid) {
+    elOvWarn.style.display = '';
+    elOvWarn.textContent = '불일치: 통장 카드대금 ' + fmtWon(cardPaid) + ' vs 명세서 ' + fmtWon(h.cardUse);
+  } else { elOvWarn.style.display = 'none'; }
+
+  const prev = householdTotals(prevMonthKey());
+  if (prev.spent === 0) { elOvDelta.textContent = ''; }
+  else {
+    const diff = h.spent - prev.spent;
+    elOvDelta.textContent = '전월대비 ' + (diff >= 0 ? '+' : '-') + fmtWon(diff);
+    elOvDelta.className = 'ov-delta' + (diff > 0 ? ' up' : ' down');
+  }
+
+  // 카테고리별
+  const total = h.spent;
+  if (total === 0) { elCatSection.style.display = 'none'; return; }
+  elCatSection.style.display = '';
+  el('categoryTotal').textContent = fmtWon(total);
+  elCatList.innerHTML = Object.keys(h.byCat)
+    .map(c => ({ cat: c, amt: h.byCat[c] }))
+    .sort((a,b) => b.amt - a.amt)
+    .map(r => {
+      const p = Math.round(r.amt / total * 100);
+      return '<div class="cat-row"><div class="cat-head">' +
+        '<span class="cat-name">' + escHtml(r.cat) + '</span>' +
+        '<span class="cat-amt">' + fmtWon(r.amt) + '<span class="cat-pct">' + p + '%</span></span></div>' +
+        '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + p + '%"></div></div></div>';
+    }).join('');
+}
+
 // 통장 탭: 이월 → 당월 입금 → 당월 출금(카드대금·이체·대차 전부) → 당월말 남은 잔액
 function renderCashFlow(txns) {
   elCashFlow.style.display = ''; elCardFlow.style.display = 'none';
@@ -396,8 +492,8 @@ function renderList(txns) {
 
 function render() {
   elMonthLabel.textContent = currentYear + '년 ' + currentMonth + '월';
-  renderOverview();
-  if (currentAccount === 'debt') { renderDebt(); return; }
+  if (currentAccount === 'house') { renderHousehold(); return; }
+  if (currentAccount === 'debt')  { renderDebt(); return; }
   const txns = getMonthlyTxns();
   renderSummary(txns); renderCategories(txns); renderList(txns);
 }
@@ -406,14 +502,16 @@ function setAccount(account) {
   currentAccount = account;
   Array.from(elTabs.children).forEach(b => b.classList.toggle('active', b.dataset.account === account));
   document.body.className = 'account-' + account;
-  // 대차는 계좌가 아니라 '상대방별 미정산' 화면이라 계좌용 영역을 모두 숨긴다.
-  const isDebt = account === 'debt';
+  // 가계(월급 기준)와 대차는 계좌가 아니라 관점이다. 계좌용 영역을 상황에 맞게 숨긴다.
+  const isDebt = account === 'debt', isHouse = account === 'house';
+  elOverview.style.display  = isHouse ? '' : 'none';
+  elHouseNote.style.display = isHouse ? '' : 'none';
   elDebtPanel.style.display = isDebt ? '' : 'none';
   elCashFlow.style.display  = 'none';
   elCardFlow.style.display  = 'none';
   elCatSection.style.display = isDebt ? 'none' : '';
-  elTxnList.style.display   = isDebt ? 'none' : '';
-  el('fabBtn').style.display = isDebt ? 'none' : '';
+  elTxnList.style.display   = (isDebt || isHouse) ? 'none' : '';
+  el('fabBtn').style.display = (isDebt || isHouse) ? 'none' : '';
   render();
 }
 
@@ -603,4 +701,4 @@ document.addEventListener('keydown', e => {
 });
 
 renderCategoryOptions('expense');
-setAccount('gongeum');
+setAccount('house');
