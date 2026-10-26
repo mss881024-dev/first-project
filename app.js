@@ -10,7 +10,7 @@ const ACCOUNTS = {
 const CATEGORIES = [
   '식비', '생활비', '교통·차량', '주거·통신', '보험·세금', '의료',
   '경조사', '여행', '쇼핑', '취미·여가', '교육',
-  '대출·이자', '투자', '대차(빌림·빌려줌)', '카드대금', '기타',
+  '대출·이자', '투자', '대차(빌림·빌려줌)', '카드대금', '대납·타인부담', '기타',
 ];
 // 입금 카테고리. '남은 금액'의 총액이 되는 것과, 총액에서 빼는 것을 구분한다.
 const INCOME_CATEGORIES = ['월급·상여', '사업·부수입', '환급·이자', '대차 회수', '대출·차입', '기타수입'];
@@ -29,6 +29,10 @@ const BUDGET_ACCOUNT = 'gongeum';
 
 // 가계 탭(월급 기준)에 넣는 지출 카테고리. 마통 운용·대출·지인 대차는 들어가지 않는다.
 // 범위는 화면에 그대로 적어 보여준다.
+// 돈은 나갔지만 남이 부담해준 것(현금으로 받음 등). 기록에는 남기되 가계 집계에서는 뺀다.
+// 지우지 않는 이유: 지우면 카드 명세서 합계와 대조가 안 된다.
+const NON_HOUSEHOLD_CATEGORIES = ['대납·타인부담'];
+
 const HOUSEHOLD_CATEGORIES = [
   '식비', '생활비', '주거·통신', '보험·세금', '의료',
   '경조사', '여행', '쇼핑', '취미·여가', '교육', '교통·차량', '기타',
@@ -149,6 +153,8 @@ const elOvDelta      = el('ovDelta');
 const elOvWarn       = el('ovWarn');
 const elOverview     = el('overview');
 const elHouseNote    = el('houseNote');
+const elOvElseRow    = el('ovElseRow');
+const elOvElse       = el('ovElse');
 const elOvSalaryEdit = el('ovSalaryEdit');
 const elOvTopupRow   = el('ovTopupRow');
 const elOvTopup      = el('ovTopup');
@@ -285,8 +291,10 @@ function renderOverview() {
 // 마통 운용(사업자대출·차 구매·지인 대차·대출이자)과 계좌 간 이동은 범위 밖이다.
 function householdTotals(mKey) {
   const salary = salaryFor(mKey);
-  const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
-    .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const cardRows = getMonthlyTxns(CARD_ACCOUNT, mKey).filter(t => t.type === 'expense');
+  const isMine = t => NON_HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1;
+  const cardUse  = cardRows.filter(isMine).reduce((s,t) => s + t.amount, 0);
+  const cardElse = cardRows.filter(t => !isMine(t)).reduce((s,t) => s + t.amount, 0);
 
   const byCat = {};
   let bankSpend = 0;
@@ -296,14 +304,13 @@ function householdTotals(mKey) {
     bankSpend += t.amount;
     byCat[t.category] = (byCat[t.category] || 0) + t.amount;
   });
-  getMonthlyTxns(CARD_ACCOUNT, mKey).forEach(t => {
-    if (t.type !== 'expense') return;
+  cardRows.filter(isMine).forEach(t => {
     const c = HOUSEHOLD_CATEGORIES.indexOf(t.category) === -1 ? '기타' : t.category;
     byCat[c] = (byCat[c] || 0) + t.amount;
   });
 
   const spent = cardUse + bankSpend;
-  return { salary, cardUse, bankSpend, spent, byCat, left: salary - spent };
+  return { salary, cardUse, cardElse, bankSpend, spent, byCat, left: salary - spent };
 }
 
 function renderHousehold() {
@@ -315,6 +322,8 @@ function renderHousehold() {
   elOvIncome.textContent = '+' + fmtWon(h.salary);
   elOvCard.textContent   = '-' + fmtWon(h.cardUse);
   elOvBank.textContent   = '-' + fmtWon(h.bankSpend);
+  elOvElseRow.style.display = h.cardElse === 0 ? 'none' : '';
+  elOvElse.textContent   = fmtWon(h.cardElse);
   elOvSalaryEdit.dataset.month = mKey;
 
   const pct = h.salary > 0 ? Math.min(100, Math.round(h.spent / h.salary * 100)) : 0;
@@ -335,12 +344,13 @@ function renderHousehold() {
   const cardPaid = getMonthlyTxns(BUDGET_ACCOUNT, mKey)
     .filter(t => t.type === 'expense' && t.category === '카드대금')
     .reduce((s,t) => s + t.amount, 0);
-  if (h.cardUse === 0 && cardPaid > 0) {
+  const stmtTotal = h.cardUse + h.cardElse;   // 명세서 전체(대사는 이 금액으로)
+  if (stmtTotal === 0 && cardPaid > 0) {
     elOvWarn.style.display = '';
     elOvWarn.textContent = '카드 명세서 미적재 — 통장에서 빠진 카드대금 ' + fmtWon(cardPaid) + '이 반영 안 됨';
-  } else if (cardPaid > 0 && h.cardUse !== cardPaid) {
+  } else if (cardPaid > 0 && stmtTotal !== cardPaid) {
     elOvWarn.style.display = '';
-    elOvWarn.textContent = '불일치: 통장 카드대금 ' + fmtWon(cardPaid) + ' vs 명세서 ' + fmtWon(h.cardUse);
+    elOvWarn.textContent = '불일치: 통장 카드대금 ' + fmtWon(cardPaid) + ' vs 명세서 ' + fmtWon(stmtTotal);
   } else { elOvWarn.style.display = 'none'; }
 
   const prev = householdTotals(prevMonthKey());
