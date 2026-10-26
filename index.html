@@ -25,11 +25,12 @@
     <div class="ov-bar"><div class="ov-bar-fill" id="ovBar"></div></div>
     <div class="ov-rows">
       <div class="ov-row"><span class="ov-row-label">수입 <em>월급·상여 등</em></span><span class="ov-amt income" id="ovIncome">+₩0</span></div>
-      <div class="ov-row"><span class="ov-row-label">카드 사용 <em>이번 달 쓴 것</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
+      <div class="ov-row"><span class="ov-row-label">카드값 <em>이 달 명세서 기준</em></span><span class="ov-amt expense" id="ovCard">-₩0</span></div>
       <div class="ov-row"><span class="ov-row-label">통장 지출 <em>카드 외</em></span><span class="ov-amt expense" id="ovBank">-₩0</span></div>
       <div class="ov-row muted" id="ovInRow" style="display:none"><span class="ov-row-label">그 외 유입 <em>대출·차입 — 남은 금액에 미포함</em></span><span class="ov-amt" id="ovOtherIn">₩0</span></div>
       <div class="ov-row" id="ovOtherRow" style="display:none"><span class="ov-row-label">그 외 유출 <em>대차·투자·이체</em></span><span class="ov-amt expense" id="ovOther">-₩0</span></div>
     </div>
+    <span class="ov-warn" id="ovWarn" style="display:none"></span>
     <span class="ov-delta" id="ovDelta"></span>
   </section>
 
@@ -51,10 +52,10 @@
 
   <section class="cash-flow" id="cardFlow" style="display:none">
     <div class="cf-total">
-      <span class="cf-left-label">당월 사용액 <em>다음 결제 예정</em></span>
+      <span class="cf-left-label">당월 청구액 <em>이 달에 빠지는 금액</em></span>
       <span class="cf-left-amt negative" id="cardUse">₩0</span>
     </div>
-    <div class="cf-row"><span class="cf-label">전월 사용액</span><span class="cf-amt" id="cardPrev">₩0</span></div>
+    <div class="cf-row"><span class="cf-label">전월 청구액</span><span class="cf-amt" id="cardPrev">₩0</span></div>
   </section>
 
   <section class="category-section" id="categorySection" style="display:none">
@@ -87,6 +88,10 @@
         <div class="form-group">
           <label for="inputAmount">금액 (원)</label>
           <input type="number" id="inputAmount" class="form-control" placeholder="0" min="0" inputmode="numeric" />
+        </div>
+        <div class="form-group" id="billGroup" style="display:none">
+          <label for="inputBill">청구월 <em>이 달 통장에서 빠지는 명세서</em></label>
+          <input type="month" id="inputBill" class="form-control" />
         </div>
         <div class="form-group" id="dirGroup" style="display:none">
           <label>이체 방향</label>

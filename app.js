@@ -55,6 +55,8 @@ function normalize(t) {
     amount: Math.abs(Number(t.amount) || 0),
     category: t.category || (type === 'transfer' ? TRANSFER_CATEGORY : type === 'income' ? '기타수입' : '기타'),
     dir: type === 'transfer' ? (t.dir === 'in' ? 'in' : 'out') : null,
+    // 카드는 '언제 긁었나'(date)와 '언제 빠지나'(bm, 청구월)가 다르다. 집계는 bm 기준.
+    bm: /^\d{4}-\d{2}$/.test(String(t.bm || '')) ? t.bm : String(t.date || '').slice(0,7),
     note: t.note || '',
     createdAt: t.createdAt || 0,
   };
@@ -77,7 +79,7 @@ function balanceAsOf(account, dateStr) {
     .reduce((s,t) => s + (isInflow(t) ? t.amount : -t.amount), 0);
 }
 function isSpending(t) { return t.type === 'expense' && EXCLUDED_FROM_SPENDING.indexOf(t.category) === -1; }
-function txnKey(t) { return [t.date, t.type, t.dir, t.amount, t.category, t.note].join('|'); }
+function txnKey(t) { return [t.date, t.bm, t.type, t.dir, t.amount, t.category, t.note].join('|'); }
 
 const el = id => document.getElementById(id);
 const elMonthLabel   = el('monthLabel');
@@ -93,6 +95,7 @@ const elOvInRow      = el('ovInRow');
 const elOvBar        = el('ovBar');
 const elOvDaily      = el('ovDaily');
 const elOvDelta      = el('ovDelta');
+const elOvWarn       = el('ovWarn');
 const elCashFlow     = el('cashFlow');
 const elCardFlow     = el('cardFlow');
 const elCfCarry      = el('cfCarry');
@@ -111,6 +114,8 @@ const elInputDate    = el('inputDate');
 const elInputAmount  = el('inputAmount');
 const elInputCategory= el('inputCategory');
 const elCategoryGroup= el('categoryGroup');
+const elBillGroup    = el('billGroup');
+const elInputBill    = el('inputBill');
 const elDirGroup     = el('dirGroup');
 const elDirControl   = el('dirControl');
 const elInputNote    = el('inputNote');
@@ -126,8 +131,12 @@ function renderCategoryOptions(type) {
     .map(c => '<option value="' + escHtml(c) + '">' + escHtml(c) + '</option>').join('');
 }
 
+// 카드는 청구월(bm), 통장은 거래일 기준으로 그 달에 속한다.
+function txnMonth(t, account) { return account === CARD_ACCOUNT ? t.bm : t.date.slice(0,7); }
 function getMonthlyTxns(account, mKey) {
-  return getTransactions(account || currentAccount).filter(t => t.date.startsWith(mKey || monthKey(currentYear, currentMonth)));
+  const acct = account || currentAccount;
+  const key  = mKey || monthKey(currentYear, currentMonth);
+  return getTransactions(acct).filter(t => txnMonth(t, acct) === key);
 }
 
 function renderSummary(txns) {
@@ -140,7 +149,7 @@ function renderSummary(txns) {
 // 카드 사용액은 통장에서 다음 달에 빠지더라도 '이번 달에 쓴 돈'으로 보고 지금 차감한다.
 // 그래서 통장의 '카드대금' 출금은 여기서 세지 않는다(이중 계상 방지).
 function monthTotals(mKey) {
-  let income = 0, otherIncome = 0, bankSpend = 0, other = 0;
+  let income = 0, otherIncome = 0, bankSpend = 0, other = 0, cardPaid = 0;
   BANK_ACCOUNTS.forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
       if (t.type === 'income') {
@@ -149,7 +158,7 @@ function monthTotals(mKey) {
         return;
       }
       if (t.type === 'transfer') { other += (t.dir === 'out' ? t.amount : -t.amount); return; }
-      if (t.category === '카드대금') return;
+      if (t.category === '카드대금') { cardPaid += t.amount; return; }
       if (NON_SPENDING_OUTFLOW.indexOf(t.category) !== -1) { other += t.amount; return; }
       bankSpend += t.amount;
     });
@@ -157,7 +166,7 @@ function monthTotals(mKey) {
   const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
     .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
   const spent = bankSpend + cardUse;
-  return { income, otherIncome, bankSpend, cardUse, other, spent, left: income - spent - other };
+  return { income, otherIncome, bankSpend, cardUse, cardPaid, other, spent, left: income - spent - other };
 }
 
 function renderOverview() {
@@ -190,6 +199,17 @@ function renderOverview() {
     elOvDaily.textContent = t.income > 0 ? '수입의 ' + pct + '% 사용' : '';
   }
 
+  // 통장에서 빠진 카드대금과 명세서 청구합계가 맞는지 대사한다.
+  // 안 맞으면 명세서가 덜 들어왔거나 청구월이 잘못 잡힌 것이다.
+  if (t.cardPaid === 0 && t.cardUse === 0) { elOvWarn.style.display = 'none'; }
+  else if (t.cardPaid === 0) { elOvWarn.style.display = ''; elOvWarn.textContent = '통장에 카드대금 출금이 없음 — 통장 내역 확인'; }
+  else if (t.cardUse === 0) { elOvWarn.style.display = ''; elOvWarn.textContent = '카드 명세서 미적재 — 통장 카드대금 ' + fmtWon(t.cardPaid) + '만 있음'; }
+  else if (t.cardPaid !== t.cardUse) {
+    elOvWarn.style.display = '';
+    elOvWarn.textContent = '불일치: 통장 카드대금 ' + fmtWon(t.cardPaid) + ' vs 명세서 ' + fmtWon(t.cardUse)
+      + ' (차이 ' + fmtWon(t.cardPaid - t.cardUse) + ')';
+  } else { elOvWarn.style.display = 'none'; }
+
   const prev = monthTotals(prevMonthKey());
   if (prev.spent === 0) { elOvDelta.textContent = ''; return; }
   const diff = t.spent - prev.spent;
@@ -219,7 +239,7 @@ function renderCashFlow(txns) {
 function renderCardFlow(txns) {
   elCashFlow.style.display = 'none'; elCardFlow.style.display = '';
   const use  = txns.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
-  const prev = getMonthlyTxns('card', prevMonthKey()).filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const prev = getMonthlyTxns(CARD_ACCOUNT, prevMonthKey()).filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
   elCardUse.textContent  = fmtWon(use);
   elCardPrev.textContent = fmtWon(prev);
 }
@@ -258,7 +278,12 @@ function renderList(txns) {
       '<span class="txn-date">' + escHtml(fmtDate(t.date)) + '</span>' +
       '<div class="txn-body">' +
         '<span class="txn-note">' + escHtml(t.note || '(비고 없음)') + '</span>' +
-        '<span class="txn-cat">' + escHtml(t.category + (t.type === 'transfer' ? (t.dir === 'in' ? ' · 받음' : ' · 보냄') : '')) + '</span>' +
+        '<span class="txn-cat">' + escHtml(
+            t.category
+            + (t.type === 'transfer' ? (t.dir === 'in' ? ' · 받음' : ' · 보냄') : '')
+            + (currentAccount === CARD_ACCOUNT && t.bm !== t.date.slice(0,7)
+               ? ' · 이용 ' + t.date.slice(5).replace('-','.') : '')
+          ) + '</span>' +
       '</div>' +
       '<span class="txn-amount ' + t.type + '">' + sign + fmtWon(t.amount) + '</span>' +
       '<button class="txn-del-btn" data-id="' + t.id + '" aria-label="삭제">&#10005;</button>';
@@ -294,10 +319,12 @@ function setSegment(type) {
   elCategoryGroup.style.display = type === 'transfer' ? 'none' : '';
   elDirGroup.style.display = type === 'transfer' ? '' : 'none';
   if (type !== 'transfer') renderCategoryOptions(type);
+  elBillGroup.style.display = (currentAccount === CARD_ACCOUNT && type === 'expense') ? '' : 'none';
 }
 
 function openModal() {
   elInputDate.value = new Date().toISOString().slice(0,10);
+  elInputBill.value = monthKey(currentYear, currentMonth);
   elInputAmount.value = ''; elInputNote.value = '';
   setSegment('expense'); setDir('out');
   elModalOverlay.classList.remove('hidden');
@@ -331,6 +358,8 @@ el('submitBtn').addEventListener('click', () => {
     id: uid(), type: selectedType, date: dateVal, amount,
     category: selectedType === 'transfer' ? TRANSFER_CATEGORY : elInputCategory.value,
     dir: selectedType === 'transfer' ? selectedDir : null,
+    bm: (currentAccount === CARD_ACCOUNT && selectedType === 'expense' && elInputBill.value)
+          ? elInputBill.value : dateVal.slice(0,7),
     note: elInputNote.value.trim(), createdAt: Date.now(),
   });
   closeModal(); render();

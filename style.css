@@ -394,3 +394,10 @@ select.form-control { appearance: none; }
 .section-total { float: right; color: var(--text); font-weight: 800; letter-spacing: -0.3px; }
 
 .ov-row.muted .ov-amt { color: var(--muted); }
+
+.form-group label em { font-style: normal; text-transform: none; letter-spacing: 0; opacity: 0.8; margin-left: 4px; font-weight: 600; }
+.ov-warn {
+  width: 100%; margin-top: 10px; padding: 8px 10px;
+  background: #FEF3C7; color: #92400E; border-radius: 8px;
+  font-size: 0.74rem; font-weight: 700; text-align: center;
+}
