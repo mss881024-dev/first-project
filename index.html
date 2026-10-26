@@ -6,7 +6,7 @@
   <title>가계부</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="account-gongeum">
 
   <header class="app-header">
     <h1 class="app-title">가계부</h1>
@@ -15,29 +15,37 @@
       <span class="month-label" id="monthLabel"></span>
       <button class="month-btn" id="nextMonth">&#8594;</button>
     </div>
+    <button class="data-btn" id="dataBtn" aria-label="데이터 관리">&#9881;</button>
   </header>
 
-  <div class="account-tabs">
-    <button class="tab-btn active" data-account="gongeum" id="tabGongeum">공금통장</button>
-    <button class="tab-btn" data-account="car" id="tabCar">자동차마통</button>
+  <div class="account-tabs" id="accountTabs">
+    <button class="tab-btn active" data-account="gongeum">공금통장</button>
+    <button class="tab-btn" data-account="car">자동차마통</button>
+    <button class="tab-btn" data-account="card">카드</button>
   </div>
 
+  <section class="spend-hero">
+    <span class="spend-label">이번달 지출</span>
+    <span class="spend-value" id="sumSpending">₩0</span>
+    <span class="spend-delta" id="spendDelta"></span>
+  </section>
+
   <div class="summary-bar">
-    <div class="summary-item">
-      <span class="summary-label">누적 잠액</span>
-      <span class="summary-value" id="sumBalance">₩0</span>
-    </div>
-    <div class="summary-divider"></div>
     <div class="summary-item">
       <span class="summary-label">이번달 입금</span>
       <span class="summary-value income" id="sumIncome">₩0</span>
     </div>
     <div class="summary-divider"></div>
     <div class="summary-item">
-      <span class="summary-label">이번달 출금</span>
-      <span class="summary-value expense" id="sumExpense">₩0</span>
+      <span class="summary-label">누적 잔액</span>
+      <span class="summary-value" id="sumBalance">₩0</span>
     </div>
   </div>
+
+  <section class="category-section" id="categorySection" style="display:none">
+    <h2 class="section-title">카테고리별 지출</h2>
+    <div class="category-list" id="categoryList"></div>
+  </section>
 
   <main class="transaction-list" id="transactionList">
     <div class="empty-state" id="emptyState">거래 내역이 없습니다.</div>
@@ -52,9 +60,10 @@
         <button class="modal-close" id="modalClose">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="segment-control">
-          <button class="segment-btn" data-type="income" id="segIncome">입금</button>
-          <button class="segment-btn active expense-active" data-type="expense" id="segExpense">출금</button>
+        <div class="segment-control" id="segmentControl">
+          <button class="segment-btn" data-type="income">입금</button>
+          <button class="segment-btn active expense-active" data-type="expense">출금</button>
+          <button class="segment-btn" data-type="transfer">이체</button>
         </div>
         <div class="form-group">
           <label for="inputDate">날짜</label>
@@ -64,11 +73,36 @@
           <label for="inputAmount">금액 (원)</label>
           <input type="number" id="inputAmount" class="form-control" placeholder="0" min="0" inputmode="numeric" />
         </div>
+        <div class="form-group" id="categoryGroup">
+          <label for="inputCategory">카테고리</label>
+          <select id="inputCategory" class="form-control"></select>
+        </div>
         <div class="form-group">
           <label for="inputNote">비고</label>
           <input type="text" id="inputNote" class="form-control" placeholder="내용을 입력하세요" />
         </div>
         <button class="submit-btn" id="submitBtn">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="dataOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <span class="modal-title">데이터 관리</span>
+        <button class="modal-close" id="dataClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="data-help">내보내기로 백업하고, 정리된 JSON을 붙여넣거나 파일로 가져옵니다. 같은 날짜·금액·내용은 중복으로 보고 자동으로 건너뜁니다.</p>
+        <button class="submit-btn" id="exportBtn">전체 내보내기 (JSON 백업)</button>
+        <div class="form-group">
+          <label for="importText">JSON 붙여넣기</label>
+          <textarea id="importText" class="form-control" rows="5" placeholder='{"accounts":{"card":[{"date":"2026-10-01","type":"expense","amount":12000,"category":"식비","note":"김밥천국"}]}}'></textarea>
+        </div>
+        <button class="submit-btn" id="importBtn">붙여넣은 내용 가져오기</button>
+        <label class="file-label" for="importFile">JSON 파일 선택해서 가져오기</label>
+        <input type="file" id="importFile" accept=".json,application/json" class="file-input" />
+        <button class="danger-btn" id="resetBtn">전체 초기화 (되돌릴 수 없음)</button>
       </div>
     </div>
   </div>
