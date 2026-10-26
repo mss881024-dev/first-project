@@ -20,6 +20,7 @@ let currentAccount = 'gongeum';
 let currentYear    = new Date().getFullYear();
 let currentMonth   = new Date().getMonth() + 1;
 let selectedType   = 'expense';
+let selectedDir    = 'out';
 let pendingDelete  = null;
 let undoTimer      = null;
 
@@ -43,6 +44,7 @@ function normalize(t) {
     date: t.date,
     amount: Math.abs(Number(t.amount) || 0),
     category: t.category || (type === 'transfer' ? TRANSFER_CATEGORY : '기타'),
+    dir: type === 'transfer' ? (t.dir === 'in' ? 'in' : 'out') : null,
     note: t.note || '',
     createdAt: t.createdAt || 0,
   };
@@ -55,7 +57,7 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function monthKey(y, m) { return y + '-' + String(m).padStart(2,'0'); }
 function prevMonthKey() { return currentMonth === 1 ? monthKey(currentYear-1, 12) : monthKey(currentYear, currentMonth-1); }
 function isSpending(t) { return t.type === 'expense' && EXCLUDED_FROM_SPENDING.indexOf(t.category) === -1; }
-function txnKey(t) { return [t.date, t.type, t.amount, t.category, t.note].join('|'); }
+function txnKey(t) { return [t.date, t.type, t.dir, t.amount, t.category, t.note].join('|'); }
 
 const el = id => document.getElementById(id);
 const elMonthLabel   = el('monthLabel');
@@ -74,6 +76,8 @@ const elInputDate    = el('inputDate');
 const elInputAmount  = el('inputAmount');
 const elInputCategory= el('inputCategory');
 const elCategoryGroup= el('categoryGroup');
+const elDirGroup     = el('dirGroup');
+const elDirControl   = el('dirControl');
 const elInputNote    = el('inputNote');
 const elSnackbar     = el('snackbar');
 const elSnackbarMsg  = el('snackbarMsg');
@@ -95,9 +99,11 @@ function renderSummary(txns) {
   const income   = txns.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
 
   const all      = getTransactions(currentAccount);
-  const totalIn  = all.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
-  const totalOut = all.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
-  const balance  = totalIn - totalOut;
+  const inflow   = all.filter(t => t.type === 'income'  || (t.type === 'transfer' && t.dir === 'in'))
+                      .reduce((s,t) => s + t.amount, 0);
+  const outflow  = all.filter(t => t.type === 'expense' || (t.type === 'transfer' && t.dir === 'out'))
+                      .reduce((s,t) => s + t.amount, 0);
+  const balance  = inflow - outflow;
 
   elSumSpending.textContent = fmtWon(spending);
   elSumIncome.textContent   = fmtWon(income);
@@ -141,12 +147,12 @@ function renderList(txns) {
   sorted.forEach(t => {
     const item = document.createElement('div');
     item.className = 'txn-item'; item.dataset.id = t.id;
-    const sign = t.type === 'income' ? '+' : t.type === 'transfer' ? '' : '-';
+    const sign = t.type === 'income' || (t.type === 'transfer' && t.dir === 'in') ? '+' : '-';
     item.innerHTML =
       '<span class="txn-date">' + escHtml(fmtDate(t.date)) + '</span>' +
       '<div class="txn-body">' +
         '<span class="txn-note">' + escHtml(t.note || '(비고 없음)') + '</span>' +
-        '<span class="txn-cat">' + escHtml(t.category) + '</span>' +
+        '<span class="txn-cat">' + escHtml(t.category + (t.type === 'transfer' ? (t.dir === 'in' ? ' · 받음' : ' · 보냄') : '')) + '</span>' +
       '</div>' +
       '<span class="txn-amount ' + t.type + '">' + sign + fmtWon(t.amount) + '</span>' +
       '<button class="txn-del-btn" data-id="' + t.id + '" aria-label="삭제">&#10005;</button>';
@@ -180,13 +186,14 @@ function setSegment(type) {
     b.className = 'segment-btn' + (on ? ' active ' + type + '-active' : '');
   });
   elCategoryGroup.style.display = type === 'transfer' ? 'none' : '';
+  elDirGroup.style.display = type === 'transfer' ? '' : 'none';
 }
 
 function openModal() {
   elInputDate.value = new Date().toISOString().slice(0,10);
   elInputAmount.value = ''; elInputNote.value = '';
   elInputCategory.value = CATEGORIES[0];
-  setSegment('expense');
+  setSegment('expense'); setDir('out');
   elModalOverlay.classList.remove('hidden');
   setTimeout(() => elInputAmount.focus(), 150);
 }
@@ -199,6 +206,16 @@ elSegments.addEventListener('click', e => {
   const btn = e.target.closest('.segment-btn'); if (btn) setSegment(btn.dataset.type);
 });
 
+function setDir(dir) {
+  selectedDir = dir;
+  Array.from(elDirControl.children).forEach(b => {
+    b.className = 'segment-btn' + (b.dataset.dir === dir ? ' active expense-active' : '');
+  });
+}
+elDirControl.addEventListener('click', e => {
+  const btn = e.target.closest('.segment-btn'); if (btn) setDir(btn.dataset.dir);
+});
+
 el('submitBtn').addEventListener('click', () => {
   const dateVal = elInputDate.value, amountStr = elInputAmount.value.trim();
   if (!dateVal) { elInputDate.focus(); return; }
@@ -207,6 +224,7 @@ el('submitBtn').addEventListener('click', () => {
   addTransaction(currentAccount, {
     id: uid(), type: selectedType, date: dateVal, amount,
     category: selectedType === 'transfer' ? TRANSFER_CATEGORY : elInputCategory.value,
+    dir: selectedType === 'transfer' ? selectedDir : null,
     note: elInputNote.value.trim(), createdAt: Date.now(),
   });
   closeModal(); render();
