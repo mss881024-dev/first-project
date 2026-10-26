@@ -409,12 +409,18 @@ function renderHousehold() {
   elHsFormula.textContent =
     won(h.inflow) + ' − ' + won(h.fixedTotal) + ' − ' + won(h.cardUse) + ' − ' + won(h.etcTotal);
 
-  // 돌려받을 돈이 있으면 통장에 남는 금액과 최종 금액을 같이 보여준다.
-  if (h.backTotal > 0) {
+  // 돌려받을 돈이 남아 있으면 통장에 남는 금액과 다 받았을 때 금액을 같이 보여준다.
+  // 이미 받은 건 들어온 돈에 들어가 있으므로, 아직 못 받은 '미정산'만 더해야 두 번 안 센다.
+  const backNames = h.back.map(r => r.name);
+  const outstanding = backNames.length
+    ? debtByPeer().filter(r => backNames.indexOf(r.peer) !== -1 && r.net > 0)
+        .reduce((s, r) => s + r.net, 0)
+    : 0;
+  if (outstanding > 0) {
     elOvBack.style.display = '';
-    elOvBack.innerHTML = '받을 돈 <b>' + won(h.backTotal) + '</b> (' +
-      h.back.map(r => escHtml(r.name)).join(', ') + ') — 돌려받으면 <b>' +
-      won(h.left + h.backTotal) + '</b>';
+    elOvBack.innerHTML = '아직 못 받은 돈 <b>' + won(outstanding) + '</b> (' +
+      backNames.map(escHtml).join(', ') + ') — 다 받으면 <b>' +
+      won(h.left + outstanding) + '</b> · 내역은 대차 탭에서';
   } else { elOvBack.style.display = 'none'; }
 
   // 예정이 섞여 있으면 숨기지 않고 적는다.
@@ -509,10 +515,29 @@ function renderCardFlow(txns) {
     '<span class="cf-amt">' + fmtWon(byIssuer[k]) + '</span></div>').join('');
 }
 
+// 가계에서 '내 돈으로 먼저 내고 나중에 돌려받기로 한 것'(back:true)을 가계 시작월부터
+// 지금까지 월별로 쌓는다. 그 달 통장 내역이 있으면 실제 금액, 없으면 설정값(예정)이다.
+function householdReceivables() {
+  const out = {};
+  const endKey = monthKey(currentYear, currentMonth);
+  if (endKey < HOUSEHOLD_START_MONTH) return out;
+  let y = Number(HOUSEHOLD_START_MONTH.slice(0,4));
+  let m = Number(HOUSEHOLD_START_MONTH.slice(5,7));
+  for (let guard = 0; guard < 240 && monthKey(y, m) <= endKey; guard++) {
+    householdTotals(monthKey(y, m)).back.forEach(r => {
+      const o = out[r.name] = out[r.name] || { given: 0, months: 0 };
+      o.given += r.amount; o.months++;
+    });
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  return out;
+}
+
 // 대차: 상대방별로 '내가 준 돈 - 받은 돈'을 모아 미정산 잔액을 낸다.
 // (+)는 내가 받을 돈, (-)는 내가 줄 돈.
+// 대차 카테고리 거래 + 가계에서 먼저 낸 돈(back) 둘 다 여기로 모은다.
 function debtByPeer() {
-  const net = {}, log = {};
+  const net = {}, log = {}, fromHouse = {};
   BANK_ACCOUNTS.forEach(a => {
     getTransactions(a).forEach(t => {
       if (t.category !== DEBT_CATEGORY) return;
@@ -522,8 +547,27 @@ function debtByPeer() {
       (log[peer] = log[peer] || []).push(t);
     });
   });
+  // 가계에서 먼저 낸 돈을 받을 돈으로 더하고, 그 이름으로 들어온 입금을 뺀다.
+  // 현금으로 돌려받으면 통장에 안 찍히므로, 받은 날 입금으로 기록해야 차감된다.
+  const house = householdReceivables();
+  Object.keys(house).forEach(name => {
+    net[name] = (net[name] || 0) + house[name].given;
+    fromHouse[name] = house[name];
+    let backCount = 0;
+    BANK_ACCOUNTS.forEach(a => {
+      getTransactions(a).forEach(t => {
+        if (t.type !== 'income' || t.category === DEBT_CATEGORY) return;
+        if (t.note.indexOf(name) === -1) return;
+        net[name] -= t.amount; backCount++;
+        (log[name] = log[name] || []).push(t);
+      });
+    });
+    log[name] = log[name] || [];
+    fromHouse[name].received = backCount;
+  });
   return Object.keys(net)
-    .map(p => ({ peer: p, net: net[p], count: log[p].length }))
+    .map(p => ({ peer: p, net: net[p], count: (log[p] || []).length,
+                 house: fromHouse[p] || null }))
     .sort((a,b) => Math.abs(b.net) - Math.abs(a.net));
 }
 
@@ -538,7 +582,9 @@ function renderDebt() {
     '<span>줄 돈 <b class="expense">' + fmtWon(toPay) + '</b></span></div>' +
     rows.map(r =>
       '<div class="debt-row"><span class="debt-peer">' + escHtml(r.peer) +
-      '<em>' + r.count + '건</em></span>' +
+      '<em>' + (r.house
+        ? '가계 ' + r.house.months + '개월 먼저 냄' + (r.house.received ? ' · 받음 ' + r.house.received + '건' : '')
+        : r.count + '건') + '</em></span>' +
       '<span class="debt-amt ' + (r.net > 0 ? 'income' : r.net < 0 ? 'expense' : 'muted') + '">' +
         (r.net > 0 ? '받을 ' : r.net < 0 ? '줄 ' : '정산됨 ') + fmtWon(r.net) +
       '</span></div>').join('');
