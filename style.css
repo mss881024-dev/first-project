@@ -440,6 +440,19 @@ body.account-house .tab-btn.active { color: var(--accent); border-bottom-color: 
 /* 예정이 섞인 달 — 파란 안내와 구분되게 노란 계열로 */
 .house-flow { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
 
+/* 남는 돈 아래 — 돌려받을 돈까지 합친 금액 */
+.ov-back {
+  display: block; margin-top: 8px; font-size: 0.78rem; line-height: 1.6; color: var(--muted);
+}
+.ov-back b { color: var(--text); font-weight: 800; }
+
+/* 돌려받는 항목 표시 */
+.hs-back {
+  font-style: normal; font-size: 0.6rem; font-weight: 800;
+  background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;
+  border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: 1px;
+}
+
 /* 실제로 돈이 움직이지 않은 줄 표시 */
 .hs-tag {
   font-style: normal; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.02em;

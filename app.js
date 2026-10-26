@@ -169,6 +169,7 @@ const elOverview     = el('overview');
 const elHouseNote    = el('houseNote');
 const elHouseStart   = el('houseStart');
 const elHouseFlow    = el('houseFlow');
+const elOvBack       = el('ovBack');
 const elHsIn         = el('hsIn');
 const elHsFixed      = el('hsFixed');
 const elHsCard       = el('hsCard');
@@ -250,36 +251,48 @@ function householdTotals(mKey) {
     EXCLUDED_AS_DOUBLE_COUNT.indexOf(t.category) === -1 &&
     OUT_OF_HOUSEHOLD_EXPENSE.indexOf(t.category) === -1);
 
-  // 같은 금액의 거래를 하나 집어 쓴다(한 번 쓴 거래는 다시 안 쓴다).
-  const take = (pool, amount) => {
-    const i = pool.findIndex(t => t.amount === amount);
+  // 거래를 하나 집어 쓴다(한 번 쓴 거래는 다시 안 쓴다).
+  const take = (pool, pick) => {
+    const i = pool.findIndex(pick);
     return i === -1 ? null : pool.splice(i, 1)[0];
   };
   const leftIn = bankIn.slice(), leftOut = bankOut.slice();
-  const matched = (pool, name, amount, fallbackNote) => {
-    const hit = amount ? take(pool, amount) : null;
+  // 설정 항목을 그 달 거래에 붙인다.
+  //  - match가 있으면 적요 키워드 + 금액대로 찾고, 금액은 '그 달 실제 금액'을 쓴다.
+  //    통신비처럼 매달 금액이 바뀌는 항목이 영영 '예정'으로 남지 않게 하기 위해서다.
+  //  - match가 없으면 설정 금액과 똑같은 거래를 찾는다.
+  const matched = (pool, item, fallbackNote) => {
+    const name = item.name, amount = item.amount || 0;
+    let hit = null;
+    if (item.match) {
+      const kw = item.match.keywords || [];
+      const lo = item.match.min || 0, hi = item.match.max || Infinity;
+      hit = take(pool, t => t.amount >= lo && t.amount <= hi &&
+        (!kw.length || kw.some(k => t.note.indexOf(k) !== -1)));
+    }
+    if (!hit && amount) hit = take(pool, t => t.amount === amount);
     return hit
-      ? { name, amount: hit.amount, real: true, note: hit.note }
-      : { name, amount: amount || 0, real: false, note: fallbackNote || '' };
+      ? { name, amount: hit.amount, real: true, note: hit.note, back: !!item.back }
+      : { name, amount: amount, real: false, note: fallbackNote || '', back: !!item.back };
   };
 
   // ---- 들어온 돈 ----
   // 월급: 짝 없는 자기이체 입금이 급여계좌에서 넘어온 돈이다. 금액이 같으면 그걸 쓴다.
   const salarySet = salaryFor(mKey);
   const inRows = [];
-  inRows.push(matched(leftIn, '월급', salarySet, '아직 입금 전'));
+  inRows.push(matched(leftIn, { name: '월급', amount: salarySet }, '아직 입금 전'));
   // 마통 보충: 짝이 확인된 계좌 간 이동만 실제로 센다.
   const topupActual = topupFor(mKey);
   if (topupActual > 0) {
     // 실제 이동액은 위 매칭 풀에서도 빼둔다(같은 거래를 두 번 세지 않도록).
-    take(leftIn, topupActual);
+    take(leftIn, t => t.amount === topupActual);
     inRows.push({ name: '마통에서', amount: topupActual, real: true, note: '실제 이동액' });
   } else if (cfg.topup > 0) {
     inRows.push({ name: '마통에서', amount: cfg.topup, real: false, note: '아직 안 옮김' });
   }
-  cfg.income.forEach(i => inRows.push(matched(leftIn, i.name, i.amount || 0, '아직 입금 전')));
+  cfg.income.forEach(i => inRows.push(matched(leftIn, i, '아직 입금 전')));
   ((cfg.extraIn && cfg.extraIn[mKey]) || [])
-    .forEach(i => inRows.push(matched(leftIn, i.name, i.amount || 0, '아직 입금 전')));
+    .forEach(i => inRows.push(matched(leftIn, i, '아직 입금 전')));
   // 설정에 없는 실제 입금도 빠뜨리지 않는다.
   leftIn.forEach(t => inRows.push({
     name: '통장에서 · ' + (t.note || t.category), amount: t.amount, real: true, note: '' }));
@@ -298,8 +311,8 @@ function householdTotals(mKey) {
   });
 
   // ---- 고정 지출 · 기타 ----
-  const fixed = cfg.fixed.map(i => matched(leftOut, i.name, i.amount || 0, '아직 안 빠짐'));
-  const etc   = cfg.etc.map(i => matched(leftOut, i.name, i.amount || 0, '아직 안 빠짐'));
+  const fixed = cfg.fixed.map(i => matched(leftOut, i, '아직 안 빠짐'));
+  const etc   = cfg.etc.map(i => matched(leftOut, i, '아직 안 빠짐'));
   // 설정에 없는 실제 통장 지출 — 기타로 모은다.
   leftOut.forEach(t => etc.push({
     name: '통장에서 · ' + (t.note || t.category), amount: t.amount, real: true, note: '' }));
@@ -323,7 +336,12 @@ function householdTotals(mKey) {
   // 나간 돈 중 거래내역으로 확인된 금액과, 아직 설정값인 금액
   const spentReal = cardUse +
     fixed.concat(etc).filter(r => r.real).reduce((s,r) => s + r.amount, 0);
+  // 내 돈으로 먼저 내고 나중에 현금으로 돌려받는 것. 나간 돈에는 그대로 두고,
+  // '받을 돈'으로 따로 보여준다 — 통장에 남는 금액과 최종 손에 쥐는 금액이 다르기 때문이다.
+  const back = fixed.concat(etc).filter(r => r.back && r.amount);
+  const backTotal = back.reduce((s,r) => s + r.amount, 0);
   return { inRows, inflow, hasBank, planned, spentReal, spentPlanned: spent - spentReal,
+           back, backTotal,
            fixed, fixedTotal, etc, etcTotal, separate: cfg.separate,
            cardUse, cardElse, byIssuer, bankSpend, byCat, spent, left: inflow - spent };
 }
@@ -356,7 +374,8 @@ function renderHousehold() {
   const sub = (amt, cls) =>
     '<div class="hs-sub"><span>소계</span><span class="' + (cls||'') + '">' + amt + '</span></div>';
   // 실제로 돈이 움직인 줄과, 아직 안 움직인 '예정' 줄을 구분해 보여준다.
-  const tag = r => r.real ? '' : '<i class="hs-tag" title="' + escHtml(r.note || '예정') + '">예정</i>';
+  const tag = r => (r.real ? '' : '<i class="hs-tag" title="' + escHtml(r.note || '예정') + '">예정</i>') +
+                   (r.back ? '<i class="hs-back" title="나중에 현금으로 돌려받는 돈">돌려받음</i>' : '');
   const flowLine = (r, sign, cls, extra) =>
     line(escHtml(r.name) + (extra || '') + tag(r), sign + won(r.amount), cls);
 
@@ -389,6 +408,14 @@ function renderHousehold() {
 
   elHsFormula.textContent =
     won(h.inflow) + ' − ' + won(h.fixedTotal) + ' − ' + won(h.cardUse) + ' − ' + won(h.etcTotal);
+
+  // 돌려받을 돈이 있으면 통장에 남는 금액과 최종 금액을 같이 보여준다.
+  if (h.backTotal > 0) {
+    elOvBack.style.display = '';
+    elOvBack.innerHTML = '받을 돈 <b>' + won(h.backTotal) + '</b> (' +
+      h.back.map(r => escHtml(r.name)).join(', ') + ') — 돌려받으면 <b>' +
+      won(h.left + h.backTotal) + '</b>';
+  } else { elOvBack.style.display = 'none'; }
 
   // 예정이 섞여 있으면 숨기지 않고 적는다.
   elHouseFlow.style.display = h.planned ? '' : 'none';
