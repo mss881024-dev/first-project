@@ -41,8 +41,14 @@ let undoTimer      = null;
 function loadSettings() {
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
-    return { salary: raw.salary || DEFAULT_SALARY, overrides: raw.overrides || {} };
-  } catch { return { salary: DEFAULT_SALARY, overrides: {} }; }
+    return {
+      salary: raw.salary || DEFAULT_SALARY,
+      // 매달 차마통에서 공금마통으로 옮겨 생활비에 보태는 돈. 마통에서 나오는 돈이라
+      // 계좌 간 이동이지만 쓸 수 있는 돈이 그만큼 늘어난다.
+      topup: raw.topup || 0,
+      overrides: raw.overrides || {},
+    };
+  } catch { return { salary: DEFAULT_SALARY, topup: 0, overrides: {} }; }
 }
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 // 월급은 거래내역에서 뽑지 않는다 — 급여 계좌가 따로 있어서 이 계좌들에는 안 들어온다.
@@ -50,6 +56,7 @@ function salaryFor(mKey) {
   const s = loadSettings();
   return mKey in s.overrides ? s.overrides[mKey] : s.salary;
 }
+function topupFor() { return loadSettings().topup; }
 
 function loadData(account) {
   try {
@@ -126,6 +133,9 @@ const elOvDaily      = el('ovDaily');
 const elOvDelta      = el('ovDelta');
 const elOvWarn       = el('ovWarn');
 const elOvSalaryEdit = el('ovSalaryEdit');
+const elOvTopupRow   = el('ovTopupRow');
+const elOvTopup      = el('ovTopup');
+const elOvTopupEdit  = el('ovTopupEdit');
 const elDebtPanel    = el('debtPanel');
 const elDebtList     = el('debtList');
 const elDebtEmpty    = el('debtEmpty');
@@ -184,6 +194,7 @@ function renderSummary(txns) {
 function monthTotals(mKey) {
   let otherIncome = 0, bankSpend = 0, moved = 0, cardPaid = 0;
   const income = salaryFor(mKey);   // 월급은 급여 계좌로 들어오므로 설정값으로 대리한다
+  const topup  = topupFor();        // 차마통에서 끌어와 생활비에 보태는 고정액
   BANK_ACCOUNTS.forEach(a => {
     getMonthlyTxns(a, mKey).forEach(t => {
       // 내 계좌끼리 옮긴 돈은 흐름이 두 번 찍히지만 실제로는 늘지도 줄지도 않는다.
@@ -198,8 +209,8 @@ function monthTotals(mKey) {
   const cardUse = getMonthlyTxns(CARD_ACCOUNT, mKey)
     .filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
   const spent = bankSpend + cardUse;
-  return { income, otherIncome, bankSpend, cardUse, cardPaid, moved, spent,
-           left: income + otherIncome - spent };
+  return { income, topup, otherIncome, bankSpend, cardUse, cardPaid, moved, spent,
+           left: income + topup + otherIncome - spent };
 }
 
 function renderOverview() {
@@ -210,6 +221,8 @@ function renderOverview() {
   elOvLeft.className   = 'ov-left-amt' + (t.left < 0 ? ' negative' : '');
   elOvIncome.textContent = '+' + fmtWon(t.income);
   elOvSalaryEdit.dataset.month = mKey;
+  elOvTopupRow.style.display = t.topup === 0 ? 'none' : '';
+  elOvTopup.textContent = '+' + fmtWon(t.topup);
   elOvCard.textContent   = '-' + fmtWon(t.cardUse);
   elOvBank.textContent   = '-' + fmtWon(t.bankSpend);
   elOvInRow.style.display = t.otherIncome === 0 ? 'none' : '';
@@ -217,7 +230,7 @@ function renderOverview() {
   elOvOtherRow.style.display = t.moved === 0 ? 'none' : '';
   elOvOther.textContent  = fmtWon(t.moved);
 
-  const pool = t.income + t.otherIncome;
+  const pool = t.income + t.topup + t.otherIncome;
   const pct  = pool > 0 ? Math.min(100, Math.round(t.spent / pool * 100)) : 0;
   elOvBar.style.width = pct + '%';
   elOvBar.className   = 'ov-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
@@ -480,6 +493,14 @@ function showSnackbar(msg, undoable) {
   elSnackbar.classList.remove('hidden');
   if (!undoable) setTimeout(() => elSnackbar.classList.add('hidden'), 2500);
 }
+
+elOvTopupEdit.addEventListener('click', () => {
+  const s = loadSettings();
+  const input = prompt('매달 차마통에서 공금마통으로 끌어와 생활비에 보태는 금액.\n0을 넣으면 줄이 사라집니다.', s.topup);
+  if (input === null) return;
+  s.topup = parseInt(String(input).replace(/[^0-9]/g, ''), 10) || 0;
+  saveSettings(s); render();
+});
 
 elOvSalaryEdit.addEventListener('click', () => {
   const mKey = elOvSalaryEdit.dataset.month;
