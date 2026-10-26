@@ -75,6 +75,7 @@ function normalize(t) {
     dir: type === 'transfer' ? (t.dir === 'in' ? 'in' : 'out') : null,
     // 카드는 '언제 긁었나'(date)와 '언제 빠지나'(bm, 청구월)가 다르다. 집계는 bm 기준.
     bm: /^\d{4}-\d{2}$/.test(String(t.bm || '')) ? t.bm : String(t.date || '').slice(0,7),
+    bal: typeof t.bal === 'number' ? t.bal : null,  // 명세서의 '거래 후 잔액'
     issuer: t.issuer || '',   // 카드 거래: 국민/BC/현대
     peer: t.peer || '',       // 대차 거래: 상대방
     note: t.note || '',
@@ -92,11 +93,20 @@ function lastDayOf(y, m) { return new Date(y, m, 0).getDate(); }
 function monthEnd(y, m) { return monthKey(y, m) + '-' + String(lastDayOf(y, m)).padStart(2,'0'); }
 function isInflow(t)  { return t.type === 'income'  || (t.type === 'transfer' && t.dir === 'in');  }
 function isOutflow(t) { return t.type === 'expense' || (t.type === 'transfer' && t.dir === 'out'); }
-// 해당 날짜까지의 잔액. '당월말에 얼마 남았나'를 보려면 당월 말일로 끊어야 한다.
+// 해당 날짜까지의 잔액. 마이너스통장은 개시 잔액이 커서 거래 합계만 더하면 틀린다.
+// 명세서가 실어준 '거래 후 잔액'이 있으면 그 날짜 이전 마지막 값을 그대로 쓴다.
 function balanceAsOf(account, dateStr) {
-  return getTransactions(account)
-    .filter(t => t.date <= dateStr)
-    .reduce((s,t) => s + (isInflow(t) ? t.amount : -t.amount), 0);
+  const txns = getTransactions(account).filter(t => t.date <= dateStr);
+  const withBal = txns.filter(t => t.bal !== null)
+                      .sort((a,b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
+  if (withBal.length) {
+    const last = withBal[withBal.length - 1];
+    // 잔액이 적힌 마지막 거래 이후에 손으로 넣은 거래가 있으면 그것만 더한다.
+    const after = txns.filter(t => t.bal === null &&
+      (t.date > last.date || (t.date === last.date && t.createdAt > last.createdAt)));
+    return after.reduce((s,t) => s + (isInflow(t) ? t.amount : -t.amount), last.bal);
+  }
+  return txns.reduce((s,t) => s + (isInflow(t) ? t.amount : -t.amount), 0);
 }
 function isSpending(t) { return t.type === 'expense' && EXCLUDED_FROM_SPENDING.indexOf(t.category) === -1; }
 function txnKey(t) { return [t.date, t.bm, t.type, t.dir, t.amount, t.category, t.note].join('|'); }
@@ -249,7 +259,7 @@ function renderCashFlow(txns) {
   const carry = balanceAsOf(currentAccount, prevEnd);
   const inAmt  = txns.filter(isInflow).reduce((s,t) => s + t.amount, 0);
   const outAmt = txns.filter(isOutflow).reduce((s,t) => s + t.amount, 0);
-  const left   = carry + inAmt - outAmt;
+  const left   = balanceAsOf(currentAccount, monthEnd(currentYear, currentMonth));
 
   elCfCarry.textContent = (carry < 0 ? '-' : '') + fmtWon(carry);
   elCfCarry.className   = 'cf-amt' + (carry < 0 ? ' negative' : '');

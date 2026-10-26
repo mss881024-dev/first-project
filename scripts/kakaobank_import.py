@@ -37,12 +37,12 @@ PEERS = _CFG.get('peers', [])
 
 # 적요/거래내용에 이 말이 들어가면 그 카테고리로 본다. 위에서부터 먼저 맞는 것을 쓴다.
 EXPENSE_RULES = [
-    (r'카드대금|카드결제|[가-힣]{2,4}카드',        '카드대금'),
+    (r'카드대금|카드결제|카드값|카드미납|[가-힣]{2,4}카드', '카드대금'),
     (r'이자|대출이자',                             '대출·이자'),
     (r'대출|마이너스|한도',                        '대출·이자'),
-    (r'보험|국민연금|건강보험|세금|지방세|자동차세|인지세', '보험·세금'),
+    (r'보험|메리츠|삼성생명|한화생명|국민연금|건강보험|세금|지방세|자동차세|재산세|인지세', '보험·세금'),
     (r'관리비|관리사무소|전기|가스|수도|통신|SKT|KT|LG U\+', '주거·통신'),
-    (r'주유|S-OIL|GS칼텍스|하이패스|주차|정비|톨', '교통·차량'),
+    (r'주유|S-OIL|GS칼텍스|하이패스|주차|정비|톨|할부|렌트|차량', '교통·차량'),
     (r'병원|의원|약국|치과',                       '의료'),
     (r'쿠팡|무신사|ZARA|네이버페이|배민|요기요',   '쇼핑'),
     (r'이마트|홈플러스|롯데마트|GS25|CU|세븐일레븐','식비'),
@@ -135,7 +135,8 @@ def find_peer(note, name_field):
     if re.fullmatch(r'[가-힣]{2,4}', token) and token != SELF_NAME and not re.search(
             r'이체|입금|출금|카드|이자|보험|세금|생활비|휴가비|원비|축의금|부조금|월급|급여|상여'
             r'|자동차|주식|가방|잔금|계약금|원비|칠순|돌잔치|축하금'
-            r'|갚|받을|예정|완료|카펫|라탄|현금|부족분|보조|용돈', token):
+            r'|갚|받을|예정|완료|카펫|라탄|현금|부족분|보조|용돈'
+            r'|재산세|할부|반품비|납부|생일|선물|회비|기부', token):
         return token
     return ''
 
@@ -197,6 +198,7 @@ def convert(path, password=None):
     # 적요가 '거래구분/상대방/메모'로 흩어져 있어서(카카오뱅크 서식) 텍스트 열을 모두 모아야
     # 분류가 제대로 된다. 한 열만 읽으면 '대출이자', '관리비' 같은 단서를 놓친다.
     c_name = col_of(header, '내용', '적요', '상대방')
+    c_bal  = col_of(header, '거래후잔액', '거래 후 잔액', '잔액')
     used = {c_date, c_type, c_in, c_out, c_amount}
     note_cols = [i for i, name in enumerate(header)
                  if i not in used
@@ -229,10 +231,21 @@ def convert(path, password=None):
             continue
 
         name_field = str(get(c_name) or '').strip()
+
+        # 마이너스통장은 개시 잔액이 커서 거래 합계만으로는 잔액을 알 수 없다.
+        # 명세서의 '거래 후 잔액'을 그대로 실어 보낸다. (아래에서 row 변수를 덮어쓰므로 미리 읽는다)
+        bal, bal_raw = None, get(c_bal)
+        if bal_raw not in (None, ''):
+            digits = re.sub(r'[^0-9-]', '', str(bal_raw))
+            if digits not in ('', '-'):
+                bal = int(digits)
+
         kind2, category, peer, issuer = classify(kind, note, date, name_field)
         row = {'date': date, 'type': kind2, 'amount': amount, 'category': category, 'note': note}
         if kind2 == 'transfer':
             row['dir'] = 'out' if kind == 'expense' else 'in'
+        if bal is not None:
+            row['bal'] = bal
         if peer:
             row['peer'] = peer
         if issuer:
