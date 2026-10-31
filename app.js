@@ -78,9 +78,12 @@ function loadSettings() {
       // 현금으로 돌려받은 기록. 현금은 통장에 안 찍히므로 거래내역에 넣으면 잔액이 틀어진다.
       // 받을 돈에서 차감하는 용도로만 쓴다 — [{name,date,amount}]
       settlements: raw.settlements || [],
+      // 지출 줄에 붙지 않는 받을 돈 (예: 실손보험 청구분 — 카드로 이미 냈고 보험에서 돌려받는다).
+      // [{name, amount, month?}] — month 를 적으면 그 달만, 없으면 매달.
+      receivables: raw.receivables || [],
     };
   } catch {
-    return { salary: DEFAULT_SALARY, topup: 0, income: [], fixed: [], etc: [], separate: [], overrides: {}, extraIn: {}, settlements: [] };
+    return { salary: DEFAULT_SALARY, topup: 0, income: [], fixed: [], etc: [], separate: [], overrides: {}, extraIn: {}, settlements: [], receivables: [] };
   }
 }
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
@@ -343,9 +346,12 @@ function householdTotals(mKey) {
   // 내 돈으로 먼저 내고 나중에 현금으로 돌려받는 것. 나간 돈에는 그대로 두고,
   // '받을 돈'으로 따로 보여준다 — 통장에 남는 금액과 최종 손에 쥐는 금액이 다르기 때문이다.
   const back = fixed.concat(etc).filter(r => r.back && r.amount);
-  const backTotal = back.reduce((s,r) => s + r.amount, 0);
+  // 지출 줄에 안 붙는 받을 돈도 같은 목록으로 본다.
+  const extraBack = cfg.receivables.filter(r => r.amount && (!r.month || r.month === mKey));
+  const backTotal = back.concat(extraBack).reduce((s,r) => s + (r.amount || 0), 0);
+  const backNames = back.map(r => r.name).concat(extraBack.map(r => r.name));
   return { inRows, inflow, hasBank, planned, spentReal, spentPlanned: spent - spentReal,
-           back, backTotal,
+           back, extraBack, backTotal, backNames,
            fixed, fixedTotal, etc, etcTotal, separate: cfg.separate,
            cardUse, cardElse, byIssuer, bankSpend, byCat, spent, left: inflow - spent };
 }
@@ -415,7 +421,7 @@ function renderHousehold() {
 
   // 돌려받을 돈이 남아 있으면 통장에 남는 금액과 다 받았을 때 금액을 같이 보여준다.
   // 이미 받은 건 들어온 돈에 들어가 있으므로, 아직 못 받은 '미정산'만 더해야 두 번 안 센다.
-  const backNames = h.back.map(r => r.name);
+  const backNames = h.backNames;
   const outstanding = backNames.length
     ? debtByPeer().filter(r => backNames.indexOf(r.peer) !== -1 && r.net > 0)
         .reduce((s, r) => s + r.net, 0)
@@ -528,9 +534,10 @@ function householdReceivables() {
   let y = Number(HOUSEHOLD_START_MONTH.slice(0,4));
   let m = Number(HOUSEHOLD_START_MONTH.slice(5,7));
   for (let guard = 0; guard < 240 && monthKey(y, m) <= endKey; guard++) {
-    householdTotals(monthKey(y, m)).back.forEach(r => {
+    const h = householdTotals(monthKey(y, m));
+    h.back.concat(h.extraBack).forEach(r => {
       const o = out[r.name] = out[r.name] || { given: 0, months: 0 };
-      o.given += r.amount; o.months++;
+      o.given += (r.amount || 0); o.months++;
     });
     m++; if (m > 12) { m = 1; y++; }
   }
@@ -841,7 +848,7 @@ function parseImport(text) {
   if (data && data.settings) {
     const cur = loadSettings(), inc = data.settings;
     ['salary','topup'].forEach(k => { if (typeof inc[k] === 'number') cur[k] = inc[k]; });
-    ['income','fixed','etc','separate','settlements'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
+    ['income','fixed','etc','separate','settlements','receivables'].forEach(k => { if (Array.isArray(inc[k])) cur[k] = inc[k]; });
     if (inc.overrides && typeof inc.overrides === 'object') {
       Object.keys(inc.overrides).forEach(m => { cur.overrides[m] = inc.overrides[m]; });
     }
