@@ -6,7 +6,7 @@
   <title>가계부</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="account-gongeum">
 
   <header class="app-header">
     <h1 class="app-title">가계부</h1>
@@ -15,29 +15,77 @@
       <span class="month-label" id="monthLabel"></span>
       <button class="month-btn" id="nextMonth">&#8594;</button>
     </div>
+    <button class="data-btn" id="dataBtn" aria-label="데이터 관리">&#9881;</button>
   </header>
 
-  <div class="account-tabs">
-    <button class="tab-btn active" data-account="gongeum" id="tabGongeum">공금통장</button>
-    <button class="tab-btn" data-account="car" id="tabCar">자동차마통</button>
+  <div class="account-tabs" id="accountTabs">
+    <button class="tab-btn active" data-account="house">가계</button>
+    <button class="tab-btn" data-account="gongeum">공금마통</button>
+    <button class="tab-btn" data-account="car">차마통</button>
+    <button class="tab-btn" data-account="card">카드</button>
+    <button class="tab-btn" data-account="debt">대차</button>
   </div>
 
-  <div class="summary-bar">
-    <div class="summary-item">
-      <span class="summary-label">누적 잠액</span>
-      <span class="summary-value" id="sumBalance">₩0</span>
+  <section class="overview" id="overview">
+    <span class="ov-label">이번 달 월급에서 남은 돈</span>
+    <span class="ov-left-amt" id="ovLeft">₩0</span>
+    <span class="ov-daily" id="ovDaily"></span>
+    <span class="ov-back" id="ovBack" style="display:none"></span>
+    <div class="ov-bar"><div class="ov-bar-fill" id="ovBar"></div></div>
+    <div class="hs-sections">
+      <div class="hs-box"><h3 class="hs-title">들어온 돈</h3><div id="hsIn"></div></div>
+      <div class="hs-box"><h3 class="hs-title">고정 지출</h3><div id="hsFixed"></div></div>
+      <div class="hs-box"><h3 class="hs-title">카드값</h3><div id="hsCard"></div></div>
+      <div class="hs-box"><h3 class="hs-title">기타</h3><div id="hsEtc"></div></div>
+      <div class="hs-box" id="hsSepBox" style="display:none">
+        <h3 class="hs-title">별도 결제 건 <em>참고만 · 총계에 미포함</em></h3><div id="hsSep"></div>
+      </div>
+      <div class="hs-formula" id="hsFormula"></div>
     </div>
-    <div class="summary-divider"></div>
-    <div class="summary-item">
-      <span class="summary-label">이번달 입금</span>
-      <span class="summary-value income" id="sumIncome">₩0</span>
+    <span class="ov-warn" id="ovWarn" style="display:none"></span>
+    <span class="ov-delta" id="ovDelta"></span>
+  </section>
+
+  <section class="house-note" id="houseStart" style="display:none"></section>
+
+  <section class="house-note house-flow" id="houseFlow" style="display:none"></section>
+
+  <section class="house-note" id="houseNote">
+    <b>이 화면이 다루는 범위</b>
+    <b>2026년 11월부터</b> 매달 월급 기준으로 정리합니다.
+    월급에서 나가는 <b>가계 생활비만</b> 봅니다 — 카드값, 식비·생활비·주거·통신·보험·의료·교통·경조사·여행·쇼핑 등.
+    <br>마통 운용(사업자대출·차량 구매·대출이자)과 지인 간 대차는 <b>이 화면에 포함되지 않으며</b>, 공금마통·차마통·대차 탭에서 따로 관리합니다.
+  </section>
+
+  <section class="cash-flow" id="cashFlow">
+    <div class="cf-row"><span class="cf-label">이월 (전월말 잔액)</span><span class="cf-amt" id="cfCarry">₩0</span></div>
+    <div class="cf-row"><span class="cf-label">당월 입금</span><span class="cf-amt income" id="cfIn">+₩0</span></div>
+    <div class="cf-row"><span class="cf-label">당월 출금 <em>카드대금·이체·대차 전부</em></span><span class="cf-amt expense" id="cfOut">-₩0</span></div>
+    <div class="cf-total">
+      <span class="cf-left-label">당월말 남은 잔액</span>
+      <span class="cf-left-amt positive" id="cfLeft">₩0</span>
     </div>
-    <div class="summary-divider"></div>
-    <div class="summary-item">
-      <span class="summary-label">이번달 출금</span>
-      <span class="summary-value expense" id="sumExpense">₩0</span>
+  </section>
+
+  <section class="cash-flow" id="cardFlow" style="display:none">
+    <div class="cf-total">
+      <span class="cf-left-label">당월 청구액 <em>이 달에 빠지는 금액</em></span>
+      <span class="cf-left-amt negative" id="cardUse">₩0</span>
     </div>
-  </div>
+    <div class="cf-row"><span class="cf-label">전월 청구액</span><span class="cf-amt" id="cardPrev">₩0</span></div>
+    <div id="cardIssuers"></div>
+  </section>
+
+  <section class="cash-flow" id="debtPanel" style="display:none">
+    <h2 class="section-title">상대방별 미정산 <span class="section-total">대차</span></h2>
+    <div id="debtList"></div>
+    <div class="empty-state" id="debtEmpty" style="display:none">대차 거래가 없습니다.</div>
+  </section>
+
+  <section class="category-section" id="categorySection" style="display:none">
+    <h2 class="section-title">카테고리별 지출 <span class="section-total" id="categoryTotal">₩0</span></h2>
+    <div class="category-list" id="categoryList"></div>
+  </section>
 
   <main class="transaction-list" id="transactionList">
     <div class="empty-state" id="emptyState">거래 내역이 없습니다.</div>
@@ -52,9 +100,10 @@
         <button class="modal-close" id="modalClose">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="segment-control">
-          <button class="segment-btn" data-type="income" id="segIncome">입금</button>
-          <button class="segment-btn active expense-active" data-type="expense" id="segExpense">출금</button>
+        <div class="segment-control" id="segmentControl">
+          <button class="segment-btn" data-type="income">입금</button>
+          <button class="segment-btn active expense-active" data-type="expense">출금</button>
+          <button class="segment-btn" data-type="transfer">이체</button>
         </div>
         <div class="form-group">
           <label for="inputDate">날짜</label>
@@ -64,11 +113,47 @@
           <label for="inputAmount">금액 (원)</label>
           <input type="number" id="inputAmount" class="form-control" placeholder="0" min="0" inputmode="numeric" />
         </div>
+        <div class="form-group" id="billGroup" style="display:none">
+          <label for="inputBill">청구월 <em>이 달 통장에서 빠지는 명세서</em></label>
+          <input type="month" id="inputBill" class="form-control" />
+        </div>
+        <div class="form-group" id="dirGroup" style="display:none">
+          <label>이체 방향</label>
+          <div class="segment-control" id="dirControl">
+            <button class="segment-btn active expense-active" data-dir="out">보냄 (이 계좌에서 나감)</button>
+            <button class="segment-btn" data-dir="in">받음 (이 계좌로 들어옴)</button>
+          </div>
+        </div>
+        <div class="form-group" id="categoryGroup">
+          <label for="inputCategory">카테고리</label>
+          <select id="inputCategory" class="form-control"></select>
+        </div>
         <div class="form-group">
           <label for="inputNote">비고</label>
           <input type="text" id="inputNote" class="form-control" placeholder="내용을 입력하세요" />
         </div>
         <button class="submit-btn" id="submitBtn">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="dataOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <span class="modal-title">데이터 관리</span>
+        <button class="modal-close" id="dataClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="data-help">내보내기로 백업하고, 정리된 JSON을 붙여넣거나 파일로 가져옵니다. 이미 저장된 건수만큼만 건너뛰므로, 같은 파일을 다시 가져와도 중복이 쌓이지 않고 명세서에 2건이면 2건 그대로 들어갑니다. 월급·고정지출·기타 설정도 같은 파일(<code>settings</code>)로 함께 들어옵니다.</p>
+        <button class="submit-btn" id="exportBtn">전체 내보내기 (JSON 백업)</button>
+        <div class="form-group">
+          <label for="importText">JSON 붙여넣기</label>
+          <textarea id="importText" class="form-control" rows="5" placeholder='{"accounts":{"card":[{"date":"2026-10-01","type":"expense","amount":12000,"category":"식비","note":"김밥천국"}]}}'></textarea>
+        </div>
+        <button class="submit-btn" id="importBtn">붙여넣은 내용 가져오기</button>
+        <label class="file-label" for="importFile">JSON 파일 선택해서 가져오기</label>
+        <input type="file" id="importFile" accept=".json,application/json" class="file-input" />
+        <button class="danger-btn" id="resetBtn">전체 초기화 (되돌릴 수 없음)</button>
       </div>
     </div>
   </div>

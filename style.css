@@ -295,3 +295,211 @@ body.account-car .submit-btn { background: #E67E22; }
 .snackbar-undo { background: none; border: none; color: #68D391; font-size: 0.88rem; font-weight: 700; cursor: pointer; padding: 0; }
 
 body.account-car .app-header { background: #E67E22; }
+/* ---------- 카드 탭 ---------- */
+body.account-card .tab-btn.active { color: #7C3AED; border-bottom-color: #7C3AED; }
+body.account-card .fab { background: #7C3AED; box-shadow: 0 4px 20px rgba(124,58,237,0.5); }
+body.account-card .form-control:focus { border-color: #7C3AED; }
+body.account-card .submit-btn { background: #7C3AED; }
+body.account-card .cat-bar-fill { background: #7C3AED; }
+body.account-car  .cat-bar-fill { background: #E67E22; }
+
+/* ---------- 헤더 설정 버튼 ---------- */
+.data-btn { background: none; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; opacity: 0.9; padding: 0 0 0 10px; }
+.data-btn:hover { opacity: 1; }
+
+/* ---------- 카테고리별 지출 ---------- */
+.category-section { margin: 16px 16px 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+.section-title { font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 12px; }
+.category-list { display: flex; flex-direction: column; gap: 12px; }
+.cat-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.cat-name { font-size: 0.88rem; font-weight: 600; }
+.cat-amt { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.3px; }
+.cat-pct { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-left: 6px; }
+.cat-bar { background: var(--bg); border-radius: 4px; height: 6px; overflow: hidden; }
+.cat-bar-fill { background: var(--accent); height: 100%; border-radius: 4px; }
+
+/* ---------- 거래 항목 (카테고리 표시 추가) ---------- */
+.txn-body { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.txn-cat { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+.txn-amount.transfer { color: var(--muted); }
+
+/* ---------- 데이터 관리 ---------- */
+.data-help { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+textarea.form-control { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
+select.form-control { appearance: none; }
+.file-input { display: none; }
+.file-label {
+  display: block; text-align: center; padding: 14px; border-radius: 10px;
+  border: 1px dashed var(--border); color: var(--muted);
+  font-size: 0.85rem; font-weight: 700; cursor: pointer; background: var(--bg);
+}
+.danger-btn {
+  background: none; border: 1px solid var(--expense); color: var(--expense);
+  border-radius: 10px; padding: 13px; font-size: 0.85rem; font-weight: 700;
+  cursor: pointer; margin-top: 4px;
+}
+
+/* ---------- 당월 현금흐름 (빠질 거 빠지고 남은 돈) ---------- */
+.cash-flow {
+  background: var(--card);
+  margin: 16px 16px 0;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+.cf-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; }
+.cf-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.cf-label em { font-style: normal; font-size: 0.68rem; opacity: 0.75; margin-left: 4px; }
+.cf-amt { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.3px; }
+.cf-amt.income   { color: var(--income); }
+.cf-amt.expense  { color: var(--expense); }
+.cf-amt.negative { color: var(--expense); }
+.cf-total {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px;
+}
+.cf-left-label { font-size: 0.85rem; font-weight: 700; }
+.cf-left-label em { font-style: normal; font-size: 0.68rem; color: var(--muted); font-weight: 600; margin-left: 4px; }
+.cf-left-amt { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.8px; }
+.cf-left-amt.positive { color: var(--income); }
+.cf-left-amt.negative { color: var(--expense); }
+
+/* ---------- 이번 달 통합 요약 (월급 총액 → 쓴 돈 → 남은 금액) ---------- */
+.overview {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ov-label { font-size: 0.74rem; color: var(--muted); font-weight: 700; letter-spacing: 0.06em; }
+.ov-left-amt { font-size: 2.1rem; font-weight: 800; color: var(--income); letter-spacing: -1.2px; margin-top: 2px; }
+.ov-left-amt.negative { color: var(--expense); }
+.ov-daily { font-size: 0.78rem; color: var(--muted); font-weight: 600; margin-top: 2px; min-height: 1em; }
+.ov-bar { width: 100%; background: var(--bg); border-radius: 4px; height: 7px; overflow: hidden; margin: 12px 0 14px; }
+.ov-bar-fill { background: var(--accent); height: 100%; border-radius: 4px; width: 0; transition: width 0.25s ease; }
+.ov-bar-fill.warn { background: #F59E0B; }
+.ov-bar-fill.over { background: var(--expense); }
+.ov-rows { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.ov-row { display: flex; justify-content: space-between; align-items: baseline; }
+.ov-row-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.ov-row-label em { font-style: normal; font-size: 0.67rem; opacity: 0.75; margin-left: 4px; }
+.ov-amt { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.3px; }
+.ov-amt.income  { color: var(--income); }
+.ov-amt.expense { color: var(--expense); }
+.ov-delta { font-size: 0.74rem; color: var(--muted); font-weight: 600; margin-top: 10px; min-height: 1em; }
+.ov-delta.up   { color: var(--expense); }
+.ov-delta.down { color: var(--income); }
+.section-total { float: right; color: var(--text); font-weight: 800; letter-spacing: -0.3px; }
+
+.ov-row.muted .ov-amt { color: var(--muted); }
+
+.form-group label em { font-style: normal; text-transform: none; letter-spacing: 0; opacity: 0.8; margin-left: 4px; font-weight: 600; }
+.ov-warn {
+  width: 100%; margin-top: 10px; padding: 8px 10px;
+  background: #FEF3C7; color: #92400E; border-radius: 8px;
+  font-size: 0.74rem; font-weight: 700; text-align: center;
+}
+
+/* ---------- 대차 탭 ---------- */
+body.account-debt .tab-btn.active { color: #0891B2; border-bottom-color: #0891B2; }
+.debt-total {
+  display: flex; justify-content: space-between;
+  padding-bottom: 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border);
+  font-size: 0.8rem; color: var(--muted); font-weight: 600;
+}
+.debt-total b { font-weight: 800; margin-left: 4px; letter-spacing: -0.3px; }
+.debt-total b.income  { color: var(--income); }
+.debt-total b.expense { color: var(--expense); }
+.debt-row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; }
+.debt-peer { font-size: 0.9rem; font-weight: 600; }
+.debt-peer em { font-style: normal; font-size: 0.68rem; color: var(--muted); margin-left: 6px; }
+.debt-amt { font-size: 0.9rem; font-weight: 700; letter-spacing: -0.3px; }
+.debt-amt.income  { color: var(--income); }
+.debt-amt.expense { color: var(--expense); }
+.debt-amt.muted   { color: var(--muted); }
+
+/* ---------- 월급 수정 버튼 ---------- */
+.ov-edit {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; padding: 1px 6px; margin-left: 6px;
+  font-size: 0.62rem; font-weight: 700; cursor: pointer;
+}
+.ov-edit:hover { color: var(--text); }
+
+/* ---------- 가계 탭 ---------- */
+body.account-house .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.house-note {
+  margin: 16px 16px 0; padding: 12px 14px;
+  background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 12px;
+  font-size: 0.74rem; line-height: 1.6; color: #1E40AF;
+}
+.house-note b { display: inline; font-weight: 800; }
+.house-note b:first-child { display: block; margin-bottom: 4px; }
+/* 예정이 섞인 달 — 파란 안내와 구분되게 노란 계열로 */
+.house-flow { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+
+/* 남는 돈 아래 — 돌려받을 돈까지 합친 금액 */
+.ov-back {
+  display: block; margin-top: 8px; font-size: 0.78rem; line-height: 1.6; color: var(--muted);
+}
+.ov-back b { color: var(--text); font-weight: 800; }
+
+/* 돌려받는 항목 표시 */
+/* 대차 탭 — 현금으로 받은 걸 기록하는 버튼 */
+.debt-cash {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; padding: 2px 7px; margin-left: 6px;
+  font-size: 0.64rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.debt-cash:hover { color: var(--text); border-color: var(--accent); }
+.debt-cash.undo { opacity: 0.75; }
+
+.hs-back {
+  font-style: normal; font-size: 0.6rem; font-weight: 800;
+  background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;
+  border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: 1px;
+}
+
+/* 실제로 돈이 움직이지 않은 줄 표시 */
+.hs-tag {
+  font-style: normal; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.02em;
+  background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;
+  border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: 1px;
+}
+
+/* ---------- 가계 탭 — 월 정산 양식 ---------- */
+.hs-sections { width: 100%; display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.hs-box { border-top: 1px solid var(--border); padding-top: 10px; }
+.hs-title {
+  font-size: 0.72rem; font-weight: 800; color: var(--muted);
+  letter-spacing: 0.06em; margin-bottom: 7px;
+}
+.hs-title em { font-style: normal; font-weight: 600; opacity: 0.8; margin-left: 5px; letter-spacing: 0; }
+.hs-row { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; }
+.hs-name { font-size: 0.83rem; font-weight: 500; }
+.hs-amt { font-size: 0.85rem; font-weight: 700; letter-spacing: -0.3px; }
+.hs-amt.income { color: var(--income); }
+.hs-amt.expense { color: var(--expense); }
+.hs-amt.muted { color: var(--muted); font-weight: 600; }
+.hs-sub {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-top: 5px; padding-top: 5px; border-top: 1px dashed var(--border);
+  font-size: 0.82rem; font-weight: 800; color: var(--muted);
+}
+.hs-sub .income { color: var(--income); }
+.hs-sub .expense { color: var(--expense); }
+.hs-empty { font-size: 0.78rem; color: var(--muted); padding: 2px 0; }
+.hs-formula {
+  margin-top: 4px; padding: 9px 10px; background: var(--bg); border-radius: 8px;
+  font-size: 0.72rem; color: var(--muted); font-weight: 600; text-align: center;
+  letter-spacing: -0.2px;
+}
+
+.hs-edit {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 5px; padding: 0 5px; margin-left: 5px;
+  font-size: 0.6rem; font-weight: 700; cursor: pointer;
+}
+.hs-edit:hover { color: var(--text); }
