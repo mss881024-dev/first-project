@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meridian Press — Independent Publishers Since 1987</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Custom Properties ─────────────────────────────────────────────────── */
+    :root {
+      --color-ink:        #1C1C2E;
+      --color-parchment:  #F5F0E8;
+      --color-vermilion:  #C0392B;
+      --color-linen:      #E8DFD0;
+      --color-slate:      #3D4A5C;
+      --color-gold:       #B8960C;
+      --color-white:      #FAFAF7;
+
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body:    'Source Serif 4', Georgia, serif;
+
+      --transition-slow: 0.4s ease;
+
+      --section-pad: 112px;
+      --section-pad-mobile: 64px;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      background-color: var(--color-parchment);
+      color: var(--color-ink);
+      font-size: 18px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Paper texture overlay via SVG noise */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.028;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    ul { list-style: none; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ─── Scroll Animation ──────────────────────────────────────────────────── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fade-in-delay-1 { transition-delay: 0.1s; }
+    .fade-in-delay-2 { transition-delay: 0.2s; }
+    .fade-in-delay-3 { transition-delay: 0.3s; }
+    .fade-in-delay-4 { transition-delay: 0.4s; }
+    .fade-in-delay-5 { transition-delay: 0.5s; }
+
+    /* ─── Typography Utilities ──────────────────────────────────────────────── */
+    .display-xl {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 500;
+      line-height: 1.08;
+      letter-spacing: -0.01em;
+    }
+    .display-lg {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3.25rem);
+      font-weight: 500;
+      line-height: 1.15;
+    }
+    .display-md {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .label {
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-slate);
+    }
+    .section-heading {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 3vw, 2.75rem);
+      font-weight: 500;
+      line-height: 1.18;
+      margin-bottom: 20px;
+    }
+    .section-heading + .rule {
+      display: block;
+      width: 48px;
+      height: 1px;
+      background: var(--color-vermilion);
+      margin-bottom: 48px;
+    }
+
+    /* ─── Layout Utilities ──────────────────────────────────────────────────── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+    @media (max-width: 768px) {
+      .container { padding: 0 20px; }
+    }
+
+    /* ─── Navigation ────────────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      background: var(--color-ink);
+      border-bottom: 1px solid rgba(245, 240, 232, 0.08);
+      transition: background var(--transition-slow);
+    }
+    .nav__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+    .nav__logo {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-white);
+      letter-spacing: 0.03em;
+    }
+    .nav__logo span {
+      color: var(--color-vermilion);
+    }
+    .nav__links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+    .nav__links a {
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(250, 250, 247, 0.72);
+      transition: color var(--transition-slow);
+    }
+    .nav__links a:hover { color: var(--color-white); }
+    .nav__cta {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-white);
+      border: 1px solid rgba(250, 250, 247, 0.3);
+      padding: 8px 20px;
+      transition: border-color var(--transition-slow), background var(--transition-slow);
+    }
+    .nav__cta:hover {
+      border-color: var(--color-vermilion);
+      background: rgba(192, 57, 43, 0.12);
+      color: var(--color-white);
+    }
+    .nav__hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+    .nav__hamburger span {
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--color-white);
+      transition: transform var(--transition-slow), opacity var(--transition-slow);
+    }
+    @media (max-width: 768px) {
+      .nav__inner { padding: 0 20px; }
+      .nav__links { display: none; }
+      .nav__hamburger { display: flex; }
+      .nav.open .nav__links {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 68px;
+        left: 0;
+        right: 0;
+        background: var(--color-ink);
+        padding: 24px 20px 32px;
+        gap: 24px;
+        border-bottom: 1px solid rgba(245,240,232,0.08);
+        align-items: flex-start;
+      }
+      .nav.open .nav__links a { font-size: 0.9rem; }
+    }
+
+    /* ─── Hero ──────────────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100svh;
+      background: var(--color-ink);
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 120px 0;
+    }
+    .hero__bg-text {
+      position: absolute;
+      right: -60px;
+      top: 50%;
+      transform: translateY(-50%) rotate(90deg);
+      font-family: var(--font-display);
+      font-size: 22vw;
+      font-weight: 700;
+      color: rgba(245, 240, 232, 0.022);
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: -0.04em;
+    }
+    .hero__inner {
+      position: relative;
+      z-index: 2;
+      max-width: 860px;
+    }
+    .hero__label {
+      color: var(--color-vermilion);
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .hero__label::before {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 1px;
+      background: var(--color-vermilion);
+    }
+    .hero__headline {
+      font-family: var(--font-display);
+      font-size: clamp(3.25rem, 8vw, 6.5rem);
+      font-weight: 500;
+      font-style: italic;
+      line-height: 1.04;
+      color: var(--color-white);
+      letter-spacing: -0.015em;
+      margin-bottom: 40px;
+    }
+    .hero__sub {
+      font-family: var(--font-body);
+      font-size: 1.15rem;
+      color: rgba(250, 250, 247, 0.62);
+      max-width: 520px;
+      line-height: 1.75;
+      margin-bottom: 56px;
+    }
+    .hero__rule {
+      width: 100%;
+      height: 1px;
+      background: rgba(245, 240, 232, 0.12);
+      margin-bottom: 56px;
+    }
+    .btn-primary {
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-ink);
+      background: var(--color-white);
+      padding: 16px 40px;
+      transition: background var(--transition-slow), color var(--transition-slow);
+    }
+    .btn-primary:hover {
+      background: var(--color-linen);
+    }
+    .btn-outline {
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-white);
+      border: 1px solid rgba(250, 250, 247, 0.35);
+      padding: 15px 40px;
+      transition: border-color var(--transition-slow), background var(--transition-slow);
+    }
+    .btn-outline:hover {
+      border-color: var(--color-white);
+      background: rgba(250,250,247,0.06);
+    }
+    .btn-dark {
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-white);
+      background: var(--color-ink);
+      padding: 16px 40px;
+      border: 1px solid var(--color-ink);
+      transition: background var(--transition-slow), color var(--transition-slow);
+    }
+    .btn-dark:hover {
+      background: var(--color-slate);
+      border-color: var(--color-slate);
+    }
+
+    /* ─── New Releases ──────────────────────────────────────────────────────── */
+    .new-releases {
+      padding: var(--section-pad) 0;
+      background: var(--color-parchment);
+    }
+    .new-releases__header {
+      margin-bottom: 64px;
+    }
+    .books-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+    }
+    @media (max-width: 900px) {
+      .books-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+    }
+    @media (max-width: 560px) {
+      .books-grid { grid-template-columns: 1fr; gap: 40px; }
+    }
+    .book-card {
+      display: flex;
+      flex-direction: column;
+    }
+    .book-cover {
+      aspect-ratio: 2 / 3;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .book-cover__rect {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px 20px;
+    }
+    .book-cover__title {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1.3rem;
+      line-height: 1.2;
+      color: var(--color-white);
+      margin-bottom: 6px;
+    }
+    .book-cover__author-small {
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(250,250,247,0.65);
+    }
+    /* SVG grain on book covers */
+    .book-cover::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.07;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .book-card__genre {
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.66rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-vermilion);
+      margin-bottom: 10px;
+    }
+    .book-card__title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 500;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+    .book-card__author {
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      color: var(--color-slate);
+    }
+
+    /* ─── Featured Author ───────────────────────────────────────────────────── */
+    .featured-author {
+      padding: var(--section-pad) 0;
+      background: var(--color-linen);
+    }
+    .featured-author__inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    @media (max-width: 768px) {
+      .featured-author__inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+    }
+    .author-photo-wrap {
+      display: flex;
+      justify-content: center;
+    }
+    .author-photo {
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: var(--color-slate);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .author-photo__initials {
+      font-family: var(--font-display);
+      font-size: 5rem;
+      font-style: italic;
+      font-weight: 500;
+      color: rgba(250,250,247,0.3);
+      z-index: 1;
+    }
+    .author-photo::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 40% 35%, #5c6a7c 0%, #2a3540 70%);
+    }
+    .author-photo::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.06;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    @media (max-width: 768px) {
+      .author-photo { width: 240px; height: 240px; }
+    }
+    .featured-author__content {}
+    .featured-author__label { margin-bottom: 32px; }
+    .featured-author__quote {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+      line-height: 1.45;
+      color: var(--color-ink);
+      margin-bottom: 32px;
+      padding-left: 24px;
+      border-left: 2px solid var(--color-vermilion);
+    }
+    .featured-author__name {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .featured-author__bio-role {
+      font-size: 0.82rem;
+      color: var(--color-slate);
+      letter-spacing: 0.08em;
+      margin-bottom: 24px;
+    }
+    .featured-author__bio {
+      font-size: 1rem;
+      color: var(--color-slate);
+      line-height: 1.8;
+      margin-bottom: 36px;
+    }
+
+    /* ─── About the Press ───────────────────────────────────────────────────── */
+    .about {
+      padding: var(--section-pad) 0;
+      background: var(--color-ink);
+      color: var(--color-white);
+    }
+    .about__inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+    @media (max-width: 768px) {
+      .about__inner { grid-template-columns: 1fr; gap: 48px; }
+    }
+    .about .section-heading { color: var(--color-white); }
+    .about .section-heading + .rule { background: var(--color-vermilion); }
+    .about__mission {
+      font-size: 1.08rem;
+      line-height: 1.85;
+      color: rgba(250,250,247,0.72);
+      margin-bottom: 40px;
+    }
+    .about__mission strong {
+      color: var(--color-white);
+      font-weight: 400;
+      font-style: italic;
+    }
+    .stats-col { display: flex; flex-direction: column; gap: 0; }
+    .stat-item {
+      padding: 36px 0;
+      border-bottom: 1px solid rgba(245,240,232,0.1);
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    .stat-item:first-child { border-top: 1px solid rgba(245,240,232,0.1); }
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      font-weight: 500;
+      color: var(--color-gold);
+      line-height: 1;
+      min-width: 120px;
+    }
+    .stat-label {
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(250,250,247,0.5);
+      margin-top: 8px;
+    }
+    .stat-desc {
+      font-size: 0.95rem;
+      color: rgba(250,250,247,0.55);
+      margin-top: 4px;
+      line-height: 1.6;
+    }
+
+    /* ─── Catalog Browse ────────────────────────────────────────────────────── */
+    .catalog {
+      padding: var(--section-pad) 0;
+      background: var(--color-parchment);
+    }
+    .catalog__filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 56px;
+    }
+    .filter-btn {
+      font-family: var(--font-body);
+      font-size: 0.74rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-slate);
+      background: none;
+      border: 1px solid rgba(61,74,92,0.3);
+      padding: 10px 24px;
+      transition: all var(--transition-slow);
+    }
+    .filter-btn:hover,
+    .filter-btn.active {
+      background: var(--color-ink);
+      color: var(--color-white);
+      border-color: var(--color-ink);
+    }
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 36px;
+    }
+    @media (max-width: 900px) {
+      .catalog-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .catalog-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    }
+    .catalog-book {
+      display: flex;
+      flex-direction: column;
+    }
+    .catalog-book__cover {
+      aspect-ratio: 2 / 3;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .catalog-book__cover-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px 14px;
+    }
+    .catalog-book__cover::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.07;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .catalog-book__title {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1rem;
+      line-height: 1.2;
+      color: var(--color-white);
+      margin-bottom: 4px;
+    }
+    .catalog-book__author-sm {
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(250,250,247,0.6);
+    }
+    .catalog-book__meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .catalog-book__genre {
+      font-size: 0.65rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-vermilion);
+    }
+    .catalog-book__year {
+      font-size: 0.75rem;
+      color: var(--color-slate);
+    }
+    .catalog-book[data-genre].hidden { display: none; }
+
+    /* ─── Press & Awards ────────────────────────────────────────────────────── */
+    .press {
+      padding: var(--section-pad) 0;
+      background: var(--color-linen);
+    }
+    .press-outlets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      border-top: 1px solid rgba(61,74,92,0.15);
+      border-left: 1px solid rgba(61,74,92,0.15);
+      margin-bottom: 72px;
+    }
+    .press-outlet {
+      flex: 1 1 160px;
+      border-right: 1px solid rgba(61,74,92,0.15);
+      border-bottom: 1px solid rgba(61,74,92,0.15);
+      padding: 32px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .press-outlet__name {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--color-slate);
+      line-height: 1.2;
+    }
+    .press-outlet__name em {
+      display: block;
+      font-size: 0.68rem;
+      font-style: normal;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(61,74,92,0.55);
+      margin-top: 4px;
+      font-family: var(--font-body);
+    }
+    .press-quotes {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 48px;
+    }
+    @media (max-width: 768px) {
+      .press-quotes { grid-template-columns: 1fr; gap: 36px; }
+    }
+    .press-quote {
+      padding: 36px;
+      background: var(--color-parchment);
+      border-left: 2px solid var(--color-vermilion);
+    }
+    .press-quote__text {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1.1rem;
+      line-height: 1.55;
+      color: var(--color-ink);
+      margin-bottom: 20px;
+    }
+    .press-quote__source {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-slate);
+    }
+
+    /* ─── Submissions ───────────────────────────────────────────────────────── */
+    .submissions {
+      padding: var(--section-pad) 0;
+      background: var(--color-parchment);
+    }
+    .submissions__inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+    }
+    @media (max-width: 768px) {
+      .submissions__inner { grid-template-columns: 1fr; gap: 48px; }
+    }
+    .submissions__list-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .submissions__list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .submissions__list li {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--color-slate);
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(61,74,92,0.12);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .submissions__list li::before {
+      content: '—';
+      color: var(--color-vermilion);
+      flex-shrink: 0;
+    }
+    .submissions__list.no li::before {
+      content: '—';
+      color: rgba(61,74,92,0.3);
+    }
+    .submissions__cta {
+      grid-column: 1 / -1;
+      padding: 56px;
+      background: var(--color-ink);
+      color: var(--color-white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .submissions__cta-text {
+      font-family: var(--font-display);
+      font-size: clamp(1.3rem, 2.5vw, 1.9rem);
+      font-style: italic;
+      line-height: 1.3;
+      max-width: 560px;
+    }
+
+    /* ─── Newsletter ────────────────────────────────────────────────────────── */
+    .newsletter {
+      padding: 80px 0;
+      background: var(--color-gold);
+    }
+    .newsletter__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+    .newsletter__copy {
+      flex: 1 1 320px;
+    }
+    .newsletter__heading {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 500;
+      color: var(--color-ink);
+      margin-bottom: 10px;
+    }
+    .newsletter__sub {
+      font-size: 0.95rem;
+      color: rgba(28,28,46,0.72);
+      line-height: 1.6;
+    }
+    .newsletter__form {
+      flex: 1 1 360px;
+      display: flex;
+      gap: 0;
+    }
+    .newsletter__input {
+      flex: 1;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      color: var(--color-ink);
+      background: rgba(245,240,232,0.5);
+      border: 1px solid rgba(28,28,46,0.25);
+      border-right: none;
+      padding: 14px 20px;
+      outline: none;
+      transition: background var(--transition-slow), border-color var(--transition-slow);
+    }
+    .newsletter__input::placeholder { color: rgba(28,28,46,0.45); }
+    .newsletter__input:focus {
+      background: rgba(245,240,232,0.8);
+      border-color: var(--color-ink);
+    }
+    .newsletter__btn {
+      font-family: var(--font-body);
+      font-size: 0.74rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-white);
+      background: var(--color-ink);
+      border: 1px solid var(--color-ink);
+      padding: 14px 28px;
+      transition: background var(--transition-slow);
+    }
+    .newsletter__btn:hover { background: var(--color-slate); border-color: var(--color-slate); }
+
+    /* ─── Footer ────────────────────────────────────────────────────────────── */
+    .footer {
+      background: var(--color-ink);
+      color: rgba(250,250,247,0.55);
+      padding: 72px 0 40px;
+    }
+    .footer__grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 64px;
+    }
+    @media (max-width: 900px) {
+      .footer__grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .footer__grid { grid-template-columns: 1fr; gap: 36px; }
+    }
+    .footer__logo {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--color-white);
+      margin-bottom: 16px;
+    }
+    .footer__logo span { color: var(--color-vermilion); }
+    .footer__address {
+      font-size: 0.88rem;
+      line-height: 1.9;
+      font-style: normal;
+    }
+    .footer__col-title {
+      font-family: var(--font-body);
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(250,250,247,0.3);
+      margin-bottom: 20px;
+    }
+    .footer__links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .footer__links a {
+      font-size: 0.9rem;
+      color: rgba(250,250,247,0.55);
+      transition: color var(--transition-slow);
+    }
+    .footer__links a:hover { color: var(--color-white); }
+    .footer__bottom {
+      border-top: 1px solid rgba(245,240,232,0.08);
+      padding-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer__copy {
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+    }
+    .footer__legal {
+      display: flex;
+      gap: 24px;
+    }
+    .footer__legal a {
+      font-size: 0.78rem;
+      color: rgba(250,250,247,0.35);
+      transition: color var(--transition-slow);
+    }
+    .footer__legal a:hover { color: rgba(250,250,247,0.7); }
+
+    /* ─── Section padding mobile ────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .new-releases,
+      .featured-author,
+      .about,
+      .catalog,
+      .press,
+      .submissions { padding: var(--section-pad-mobile) 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Navigation ──────────────────────────────────────────────────────── -->
+  <nav class="nav" id="main-nav">
+    <div class="nav__inner">
+      <a href="#" class="nav__logo">Meridian<span>.</span>Press</a>
+      <ul class="nav__links">
+        <li><a href="#catalog">Catalog</a></li>
+        <li><a href="#featured-author">Authors</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#submissions">Submissions</a></li>
+        <li><a href="#newsletter">Contact</a></li>
+        <li><a href="#catalog" class="nav__cta">Browse Books</a></li>
+      </ul>
+      <button class="nav__hamburger" id="hamburger" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ─── Hero ────────────────────────────────────────────────────────────── -->
+  <section class="hero" aria-label="Hero">
+    <div class="hero__bg-text" aria-hidden="true">Meridian</div>
+    <div class="container">
+      <div class="hero__inner">
+        <p class="label hero__label fade-in">Independent Publishing Since 1987</p>
+        <h1 class="hero__headline fade-in fade-in-delay-1">
+          Books that<br>hold their ground<br>against time.
+        </h1>
+        <div class="hero__rule fade-in fade-in-delay-2"></div>
+        <p class="hero__sub fade-in fade-in-delay-2">
+          Meridian Press publishes literature of consequence — voices that disturb, comfort, and endure. Our list spans literary fiction, narrative non-fiction, poetry, and translation.
+        </p>
+        <div class="fade-in fade-in-delay-3">
+          <a href="#new-releases" class="btn-primary">Explore New Releases</a>
+          &nbsp;&nbsp;&nbsp;
+          <a href="#about" class="btn-outline">Our Story</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── New Releases ────────────────────────────────────────────────────── -->
+  <section class="new-releases" id="new-releases" aria-labelledby="releases-heading">
+    <div class="container">
+      <div class="new-releases__header fade-in">
+        <p class="label" style="margin-bottom:16px;">Autumn 2026</p>
+        <h2 class="section-heading" id="releases-heading">New Releases</h2>
+        <span class="rule"></span>
+      </div>
+
+      <div class="books-grid">
+
+        <!-- Book 1 -->
+        <article class="book-card fade-in fade-in-delay-1">
+          <div class="book-cover">
+            <div class="book-cover__rect" style="background-color:#2C3E50;">
+              <p class="book-cover__title">The Cartographer's Daughter</p>
+              <p class="book-cover__author-small">Elena Vasquez</p>
+            </div>
+          </div>
+          <span class="book-card__genre">Literary Fiction</span>
+          <h3 class="book-card__title">The Cartographer's Daughter</h3>
+          <p class="book-card__author">Elena Vasquez</p>
+        </article>
+
+        <!-- Book 2 -->
+        <article class="book-card fade-in fade-in-delay-2">
+          <div class="book-cover">
+            <div class="book-cover__rect" style="background-color:#5D3A1A;">
+              <p class="book-cover__title">On the Occasion of Our Departure</p>
+              <p class="book-cover__author-small">James Okafor</p>
+            </div>
+          </div>
+          <span class="book-card__genre">Essays</span>
+          <h3 class="book-card__title">On the Occasion of Our Departure</h3>
+          <p class="book-card__author">James Okafor</p>
+        </article>
+
+        <!-- Book 3 -->
+        <article class="book-card fade-in fade-in-delay-3">
+          <div class="book-cover">
+            <div class="book-cover__rect" style="background-color:#4A4558;">
+              <p class="book-cover__title">Still Water Running Deep</p>
+              <p class="book-cover__author-small">Miriam Chen</p>
+            </div>
+          </div>
+          <span class="book-card__genre">Poetry</span>
+          <h3 class="book-card__title">Still Water Running Deep</h3>
+          <p class="book-card__author">Miriam Chen</p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Featured Author ─────────────────────────────────────────────────── -->
+  <section class="featured-author" id="featured-author" aria-labelledby="author-heading">
+    <div class="container">
+      <div class="featured-author__inner">
+
+        <div class="author-photo-wrap fade-in">
+          <div class="author-photo" role="img" aria-label="Portrait of James Okafor">
+            <span class="author-photo__initials">JO</span>
+          </div>
+        </div>
+
+        <div class="featured-author__content fade-in fade-in-delay-2">
+          <p class="label featured-author__label">Featured Author</p>
+          <blockquote class="featured-author__quote">
+            "To write is not to speak of the world — it is to make the world pause long enough to hear itself."
+          </blockquote>
+          <h2 class="featured-author__name" id="author-heading">James Okafor</h2>
+          <p class="featured-author__bio-role">Essayist — Lagos, London, New York</p>
+          <p class="featured-author__bio">
+            James Okafor's essays are acts of sustained attention — patient, morally awake, and generous in their complexity. His work has appeared in <em>Granta</em>, <em>The Paris Review</em>, and <em>The London Review of Books</em>. His third collection with Meridian Press, <em>On the Occasion of Our Departure</em>, traces the interior life of migration.
+          </p>
+          <a href="#catalog" class="btn-dark">Read the Collection</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── About the Press ─────────────────────────────────────────────────── -->
+  <section class="about" id="about" aria-labelledby="about-heading">
+    <div class="container">
+      <div class="about__inner">
+
+        <div class="fade-in">
+          <p class="label" style="color:rgba(250,250,247,0.4); margin-bottom:20px;">Who We Are</p>
+          <h2 class="section-heading" id="about-heading">A Press Built on Conviction</h2>
+          <span class="rule"></span>
+          <p class="about__mission">
+            Founded in Edinburgh in 1987, Meridian Press began as a single editor's wager: that <strong>readers hunger for books of genuine literary ambition</strong>, and that those books deserve to be published with care and kept in print for decades.
+          </p>
+          <p class="about__mission">
+            We remain independently owned. We do not answer to shareholders. Every title on our list is there because someone in this building believed in it unreservedly.
+          </p>
+          <a href="#submissions" class="btn-outline">Submit Your Work</a>
+        </div>
+
+        <div class="stats-col fade-in fade-in-delay-2">
+          <div class="stat-item">
+            <div>
+              <div class="stat-number">1987</div>
+              <div class="stat-label">Founded</div>
+              <div class="stat-desc">Edinburgh, Scotland. Still independent after nearly four decades.</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div>
+              <div class="stat-number">340</div>
+              <div class="stat-label">Titles Published</div>
+              <div class="stat-desc">Every one still available in print. We do not let our books go out of print.</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div>
+              <div class="stat-number">12</div>
+              <div class="stat-label">Major Awards</div>
+              <div class="stat-desc">Including two Booker Prizes, a National Book Award, and the Pen/Faulkner.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Catalog Browse ───────────────────────────────────────────────────── -->
+  <section class="catalog" id="catalog" aria-labelledby="catalog-heading">
+    <div class="container">
+      <div class="fade-in" style="margin-bottom:64px;">
+        <p class="label" style="margin-bottom:16px;">340 Titles</p>
+        <h2 class="section-heading" id="catalog-heading">Browse the Catalog</h2>
+        <span class="rule"></span>
+      </div>
+
+      <div class="catalog__filters fade-in" role="group" aria-label="Filter by genre">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="fiction">Fiction</button>
+        <button class="filter-btn" data-filter="nonfiction">Non-Fiction</button>
+        <button class="filter-btn" data-filter="poetry">Poetry</button>
+        <button class="filter-btn" data-filter="essays">Essays</button>
+        <button class="filter-btn" data-filter="translation">Translation</button>
+      </div>
+
+      <div class="catalog-grid" id="catalog-grid">
+
+        <article class="catalog-book fade-in" data-genre="fiction">
+          <div class="catalog-book__cover">
+            <div class="catalog-book__cover-inner" style="background-color:#2C3E50;">
+              <p class="catalog-book__title">The Cartographer's Daughter</p>
+              <p class="catalog-book__author-sm">Elena Vasquez</p>
+            </div>
+          </div>
+          <div class="catalog-book__meta">
+            <span class="catalog-book__genre">Fiction</span>
+            <span class="catalog-book__year">2026</span>
+          </div>
+        </article>
+
+        <article class="catalog-book fade-in fade-in-delay-1" data-genre="essays">
+          <div class="catalog-book__cover">
+            <div class="catalog-book__cover-inner" style="background-color:#5D3A1A;">
+              <p class="catalog-book__title">On the Occasion of Our Departure</p>
+              <p class="catalog-book__author-sm">James Okafor</p>
+            </div>
+          </div>
+          <div class="catalog-book__meta">
+            <span class="catalog-book__genre">Essays</span>
+            <span class="catalog-book__year">2026</span>
+          </div>
+        </article>
+
+        <article class="catalog-book fade-in fade-in-delay-2" data-genre="poetry">
+          <div class="catalog-book__cover">
+            <div class="catalog-book__cover-inner" style="background-color:#4A4558;">
+              <p class="catalog-book__title">Still Water Running Deep</p>
+              <p class="catalog-book__author-sm">Miriam Chen</p>
+            </div>
+          </div>
+          <div class="catalog-book__meta">
+            <span class="catalog-book__genre">Poetry</span>
+            <span class="catalog-book__year">2025</span>
+          </div>
+        </article>
+
+        <article class="catalog-book fade-in fade-in-delay-3" data-genre="translation">
+          <div class="catalog-book__cover">
+            <div class="catalog-book__cover-inner" style="background-color:#3B5249;">
+              <p class="catalog-book__title">The River Knows No Borders</p>
+              <p class="catalog-book__author-sm">Adaeze Nwosu, tr. P. Hartmann</p>
+            </div>
+          </div>
+          <div class="catalog-book__meta">
+            <span class="catalog-book__genre">Translation</span>
+            <span class="catalog-book__year">2025</span>
+          </div>
+        </article>
+
+        <article class="catalog-book fade-in fade-in-delay-4" data-genre="nonfiction">
+          <div class="catalog-book__cover">
+            <div class="catalog-book__cover-inner" style="background-color:#6B3A2A;">
+              <p class="catalog-book__title">A Theory of Longing</p>
+              <p class="catalog-book__author-sm">Dr. Sarah Lindqvist</p>
+            </div>
+          </div>
+          <div class="catalog-book__meta">
+            <span class="catalog-book__genre">Non-Fiction</span>
+            <span class="catalog-book__year">2024</span>
+          </div>
+        </article>
+
+        <article class="catalog-book fade-in fade-in-delay-5" data-genre="fiction">
+          <div class="catalog-book__cover">
+            <div class="catalog-book__cover-inner" style="background-color:#2E3D2F;">
+              <p class="catalog-book__title">What the Dead Carry</p>
+              <p class="catalog-book__author-sm">Tomás Reinholt</p>
+            </div>
+          </div>
+          <div class="catalog-book__meta">
+            <span class="catalog-book__genre">Fiction</span>
+            <span class="catalog-book__year">2024</span>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Press & Awards ──────────────────────────────────────────────────── -->
+  <section class="press" id="press" aria-labelledby="press-heading">
+    <div class="container">
+      <div class="fade-in" style="margin-bottom:64px;">
+        <p class="label" style="margin-bottom:16px;">Recognition</p>
+        <h2 class="section-heading" id="press-heading">Press &amp; Awards</h2>
+        <span class="rule"></span>
+      </div>
+
+      <div class="press-outlets fade-in" role="list" aria-label="Press and award recognition from">
+        <div class="press-outlet" role="listitem">
+          <div class="press-outlet__name">The New York Times<em>Book Review</em></div>
+        </div>
+        <div class="press-outlet" role="listitem">
+          <div class="press-outlet__name">The Guardian<em>Books</em></div>
+        </div>
+        <div class="press-outlet" role="listitem">
+          <div class="press-outlet__name">Booker Prize<em>Foundation</em></div>
+        </div>
+        <div class="press-outlet" role="listitem">
+          <div class="press-outlet__name">The Paris Review<em>Featured</em></div>
+        </div>
+        <div class="press-outlet" role="listitem">
+          <div class="press-outlet__name">National Book<em>Award</em></div>
+        </div>
+        <div class="press-outlet" role="listitem">
+          <div class="press-outlet__name">Pen/Faulkner<em>Award</em></div>
+        </div>
+      </div>
+
+      <div class="press-quotes">
+
+        <blockquote class="press-quote fade-in">
+          <p class="press-quote__text">
+            "Meridian Press has become one of the few publishers whose catalogue can be trusted outright. To see their colophon on a spine is to know the book has been taken seriously."
+          </p>
+          <footer class="press-quote__source">The New York Times Book Review</footer>
+        </blockquote>
+
+        <blockquote class="press-quote fade-in fade-in-delay-1">
+          <p class="press-quote__text">
+            "An unbroken record of publishing literature that matters — and keeping it in print long enough to matter to a second generation of readers."
+          </p>
+          <footer class="press-quote__source">The Guardian</footer>
+        </blockquote>
+
+        <blockquote class="press-quote fade-in fade-in-delay-2">
+          <p class="press-quote__text">
+            "What distinguishes Meridian from the corporate houses is not merely their taste but their patience. They wait for a book to find its readers."
+          </p>
+          <footer class="press-quote__source">The Paris Review</footer>
+        </blockquote>
+
+        <blockquote class="press-quote fade-in fade-in-delay-3">
+          <p class="press-quote__text">
+            "A publishing house with a genuine voice — one that speaks plainly, edits rigorously, and never condescends to the reader."
+          </p>
+          <footer class="press-quote__source">The Times Literary Supplement</footer>
+        </blockquote>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Submissions ──────────────────────────────────────────────────────── -->
+  <section class="submissions" id="submissions" aria-labelledby="submissions-heading">
+    <div class="container">
+      <div class="fade-in" style="margin-bottom:64px;">
+        <p class="label" style="margin-bottom:16px;">For Writers</p>
+        <h2 class="section-heading" id="submissions-heading">Submissions</h2>
+        <span class="rule"></span>
+        <p style="max-width:600px; font-size:1.05rem; color:var(--color-slate); line-height:1.8;">
+          We read every submission we receive. We respond within eight weeks. We will tell you honestly whether your work belongs with us, and we will treat your manuscript with the attention it deserves.
+        </p>
+      </div>
+
+      <div class="submissions__inner">
+
+        <div class="fade-in">
+          <h3 class="submissions__list-title">What we publish</h3>
+          <ul class="submissions__list">
+            <li>Literary fiction of any length, including novellas</li>
+            <li>Essay collections with a sustained intellectual or personal focus</li>
+            <li>Poetry collections — we read them whole, not in excerpts</li>
+            <li>Narrative non-fiction with strong original reporting</li>
+            <li>Literary translation from any language</li>
+            <li>First books from writers of evident ambition</li>
+          </ul>
+        </div>
+
+        <div class="fade-in fade-in-delay-1">
+          <h3 class="submissions__list-title">What we do not publish</h3>
+          <ul class="submissions__list no">
+            <li>Genre fiction: thriller, romance, fantasy, science fiction</li>
+            <li>Self-help, lifestyle, or wellness titles</li>
+            <li>Children's or young adult literature</li>
+            <li>Celebrity memoir or platform-driven non-fiction</li>
+            <li>Illustrated books or graphic novels</li>
+            <li>Previously self-published work</li>
+          </ul>
+        </div>
+
+        <div class="submissions__cta fade-in">
+          <p class="submissions__cta-text">
+            Ready to submit your manuscript to Meridian Press?
+          </p>
+          <a href="mailto:submissions@meridianpress.com" class="btn-primary">Send Your Submission</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Newsletter ───────────────────────────────────────────────────────── -->
+  <section class="newsletter" id="newsletter" aria-labelledby="newsletter-heading">
+    <div class="container">
+      <div class="newsletter__inner">
+        <div class="newsletter__copy fade-in">
+          <h2 class="newsletter__heading" id="newsletter-heading">Letters from the Press</h2>
+          <p class="newsletter__sub">
+            Occasional correspondence on new titles, authors in conversation, and the life of independent publishing. Sent when something is worth saying.
+          </p>
+        </div>
+        <form class="newsletter__form fade-in fade-in-delay-1" onsubmit="handleNewsletter(event)" novalidate>
+          <label for="newsletter-email" class="sr-only">Your email address</label>
+          <input
+            type="email"
+            id="newsletter-email"
+            name="email"
+            class="newsletter__input"
+            placeholder="Your email address"
+            required
+            autocomplete="email"
+          >
+          <button type="submit" class="newsletter__btn">Subscribe</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Footer ──────────────────────────────────────────────────────────── -->
+  <footer class="footer" aria-label="Site footer">
+    <div class="container">
+      <div class="footer__grid">
+
+        <div>
+          <div class="footer__logo">Meridian<span>.</span>Press</div>
+          <address class="footer__address">
+            14 Queensferry Street<br>
+            Edinburgh EH2 4PG<br>
+            Scotland, United Kingdom<br><br>
+            +44 (0)131 220 4400<br>
+            hello@meridianpress.com
+          </address>
+        </div>
+
+        <div>
+          <p class="footer__col-title">Catalog</p>
+          <ul class="footer__links">
+            <li><a href="#catalog">All Titles</a></li>
+            <li><a href="#catalog">Fiction</a></li>
+            <li><a href="#catalog">Non-Fiction</a></li>
+            <li><a href="#catalog">Poetry</a></li>
+            <li><a href="#catalog">Essays</a></li>
+            <li><a href="#catalog">Translation</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer__col-title">The Press</p>
+          <ul class="footer__links">
+            <li><a href="#about">About Us</a></li>
+            <li><a href="#featured-author">Authors</a></li>
+            <li><a href="#press">Press</a></li>
+            <li><a href="#submissions">Submissions</a></li>
+            <li><a href="#newsletter">Newsletter</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer__col-title">Elsewhere</p>
+          <ul class="footer__links">
+            <li><a href="#">Twitter / X</a></li>
+            <li><a href="#">Instagram</a></li>
+            <li><a href="#">Facebook</a></li>
+            <li><a href="#">Goodreads</a></li>
+            <li><a href="#">The Bookseller</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="footer__bottom">
+        <p class="footer__copy">
+          &copy; 2026 Meridian Press Ltd. All rights reserved.
+        </p>
+        <nav class="footer__legal" aria-label="Legal links">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Use</a>
+          <a href="#">Accessibility</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ─── Visually Hidden Utility ─────────────────────────────────────────── -->
+  <style>
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  </style>
+
+  <script>
+    // ── Scroll-triggered fade-in ──────────────────────────────────────────────
+    const fadeEls = document.querySelectorAll('.fade-in');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    fadeEls.forEach((el) => observer.observe(el));
+
+    // ── Mobile navigation toggle ──────────────────────────────────────────────
+    const nav = document.getElementById('main-nav');
+    const hamburger = document.getElementById('hamburger');
+    hamburger.addEventListener('click', () => {
+      const isOpen = nav.classList.toggle('open');
+      hamburger.setAttribute('aria-expanded', isOpen);
+    });
+    // Close nav on link click (mobile)
+    nav.querySelectorAll('.nav__links a').forEach((link) => {
+      link.addEventListener('click', () => {
+        nav.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    // ── Catalog genre filter ──────────────────────────────────────────────────
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const catalogBooks = document.querySelectorAll('.catalog-book');
+
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const filter = btn.getAttribute('data-filter');
+        catalogBooks.forEach((book) => {
+          const genre = book.getAttribute('data-genre');
+          if (filter === 'all' || genre === filter) {
+            book.classList.remove('hidden');
+          } else {
+            book.classList.add('hidden');
+          }
+        });
+      });
+    });
+
+    // ── Newsletter form ───────────────────────────────────────────────────────
+    function handleNewsletter(e) {
+      e.preventDefault();
+      const form = e.target;
+      const input = form.querySelector('input[type="email"]');
+      const btn = form.querySelector('button');
+
+      if (!input.value || !input.checkValidity()) {
+        input.style.borderColor = 'var(--color-vermilion)';
+        input.focus();
+        return;
+      }
+
+      btn.textContent = 'Subscribed';
+      btn.disabled = true;
+      input.disabled = true;
+      input.style.borderColor = '';
+      btn.style.background = 'var(--color-slate)';
+    }
+
+    // ── Scroll-aware nav (subtle border) ─────────────────────────────────────
+    let lastScroll = 0;
+    window.addEventListener('scroll', () => {
+      const scrollY = window.scrollY;
+      if (scrollY > 80) {
+        nav.style.borderBottomColor = 'rgba(245,240,232,0.12)';
+      } else {
+        nav.style.borderBottomColor = 'rgba(245,240,232,0.08)';
+      }
+      lastScroll = scrollY;
+    }, { passive: true });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Aider configuration
+# https://aider.chat/docs/config/aider_conf.html
+
+model: gpt-4o
+dark-mode: true
+auto-commits: true
+gitignore: true
+read:
+  - docs/workflows/aider.md
