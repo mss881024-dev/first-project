@@ -16,3 +16,7 @@ Thumbs.db
 # Editor
 .vscode/settings.json
 *.swp
+
+# Office temp & MIP files
+~$*
+*.mip
